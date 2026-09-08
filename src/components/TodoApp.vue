@@ -3,8 +3,16 @@ import { ref, computed, watch } from 'vue'
 
 const STORAGE_KEY = 'todo-app.todos'
 
+const PRIORITIES = {
+  high: { label: 'High', badge: 'danger', color: '#dc3545' },
+  medium: { label: 'Medium', badge: 'warning', color: '#fd7e14' },
+  low: { label: 'Low', badge: 'success', color: '#198754' },
+}
+const PRIORITY_ORDER = ['high', 'medium', 'low']
+
 const todos = ref(loadTodos())
 const newTodo = ref('')
+const newPriority = ref('medium')
 const filter = ref('all')
 
 function loadTodos() {
@@ -27,12 +35,17 @@ watch(
 function addTodo() {
   const text = newTodo.value.trim()
   if (!text) return
-  todos.value.push({ id: Date.now(), text, done: false })
+  todos.value.push({ id: Date.now(), text, done: false, priority: newPriority.value })
   newTodo.value = ''
+  newPriority.value = 'medium'
 }
 
 function removeTodo(id) {
   todos.value = todos.value.filter((todo) => todo.id !== id)
+}
+
+function setPriority(todo, priority) {
+  todo.priority = priority
 }
 
 function clearCompleted() {
@@ -46,9 +59,12 @@ const filters = [
 ]
 
 const filteredTodos = computed(() => {
-  if (filter.value === 'active') return todos.value.filter((t) => !t.done)
-  if (filter.value === 'completed') return todos.value.filter((t) => t.done)
-  return todos.value
+  let list = todos.value
+  if (filter.value === 'active') list = list.filter((t) => !t.done)
+  if (filter.value === 'completed') list = list.filter((t) => t.done)
+  return [...list].sort(
+    (a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium')
+  )
 })
 
 const remainingCount = computed(() => todos.value.filter((t) => !t.done).length)
@@ -80,6 +96,9 @@ const progress = computed(() =>
             class="form-control border-start-0 ps-0"
             placeholder="What needs to be done?"
           />
+          <select v-model="newPriority" class="form-select flex-grow-0 w-auto priority-select" aria-label="Priority">
+            <option v-for="key in PRIORITY_ORDER" :key="key" :value="key">{{ PRIORITIES[key].label }}</option>
+          </select>
           <button class="btn btn-primary px-4" type="submit" :disabled="!newTodo.trim()">
             Add
           </button>
@@ -125,6 +144,7 @@ const progress = computed(() =>
             :key="todo.id"
             class="todo-item d-flex align-items-center gap-3"
             :class="{ 'todo-item-done': todo.done }"
+            :style="{ borderInlineStartColor: PRIORITIES[todo.priority || 'medium'].color }"
           >
             <label class="todo-check flex-shrink-0" :class="{ checked: todo.done }">
               <input type="checkbox" v-model="todo.done" />
@@ -133,6 +153,25 @@ const progress = computed(() =>
               </span>
             </label>
             <span class="flex-grow-1 todo-text">{{ todo.text }}</span>
+            <div class="dropdown flex-shrink-0">
+              <button
+                type="button"
+                class="btn btn-sm priority-badge"
+                :class="`badge-${PRIORITIES[todo.priority || 'medium'].badge}`"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                {{ PRIORITIES[todo.priority || 'medium'].label }}
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li v-for="key in PRIORITY_ORDER" :key="key">
+                  <button type="button" class="dropdown-item d-flex align-items-center gap-2" @click="setPriority(todo, key)">
+                    <span class="priority-dot" :style="{ background: PRIORITIES[key].color }"></span>
+                    {{ PRIORITIES[key].label }}
+                  </button>
+                </li>
+              </ul>
+            </div>
             <button
               type="button"
               class="btn btn-sm btn-icon text-muted"
@@ -217,10 +256,42 @@ const progress = computed(() =>
   padding: 12px 14px;
   border-radius: 12px;
   background: #f8f9fc;
+  border-inline-start: 4px solid transparent;
   transition: background 0.2s ease;
 }
 .todo-item:hover {
   background: #f0f1fa;
+}
+
+.priority-select {
+  border-color: #dfe1e8;
+}
+
+.priority-badge {
+  font-weight: 600;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: none;
+}
+.badge-danger {
+  background: rgba(220, 53, 69, 0.12);
+  color: #dc3545;
+}
+.badge-warning {
+  background: rgba(253, 126, 20, 0.14);
+  color: #b8590a;
+}
+.badge-success {
+  background: rgba(25, 135, 84, 0.12);
+  color: #198754;
+}
+
+.priority-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 .todo-text {
