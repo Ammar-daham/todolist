@@ -6,12 +6,18 @@ defineProps({
 	totalCount: { type: Number, required: true },
 	remainingCount: { type: Number, required: true },
 })
-defineEmits(['remove', 'clear-completed'])
+defineEmits(['toggle', 'remove', 'clear-completed'])
 </script>
 
 <template>
 	<transition-group tag="ul" name="todo-list" class="list-unstyled mb-0 todo-list">
-		<TodoItem v-for="todo in todos" :key="todo.id" :todo="todo" @remove="$emit('remove', $event)" />
+		<TodoItem
+			v-for="todo in todos"
+			:key="todo.id"
+			:todo="todo"
+			@toggle="$emit('toggle', $event)"
+			@remove="$emit('remove', $event)"
+		/>
 	</transition-group>
 
 	<div v-if="totalCount && !todos.length" class="text-center text-muted py-5">

@@ -6,7 +6,13 @@ const STORAGE_KEY = 'todo-app.todos'
 function loadTodos() {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY)
-		return raw ? JSON.parse(raw) : []
+		const parsed = raw ? JSON.parse(raw) : []
+		return parsed.map((todo) => ({
+			completedAt: null,
+			removedAt: null,
+			...todo,
+			createdAt: todo.createdAt ?? Date.now(),
+		}))
 	} catch {
 		return []
 	}
@@ -27,19 +33,49 @@ export function useTodos() {
 	function addTodo(text, priority) {
 		const trimmed = text.trim()
 		if (!trimmed) return
-		todos.value.push({ id: Date.now(), text: trimmed, done: false, priority })
+		todos.value.push({
+			id: Date.now(),
+			text: trimmed,
+			done: false,
+			priority,
+			createdAt: Date.now(),
+			completedAt: null,
+			removedAt: null,
+		})
+	}
+
+	function toggleTodo(id) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (!todo) return
+		todo.done = !todo.done
+		todo.completedAt = todo.done ? Date.now() : null
 	}
 
 	function removeTodo(id) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (todo) todo.removedAt = Date.now()
+	}
+
+	function restoreTodo(id) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (todo) todo.removedAt = null
+	}
+
+	function deleteTodoPermanently(id) {
 		todos.value = todos.value.filter((todo) => todo.id !== id)
 	}
 
 	function clearCompleted() {
-		todos.value = todos.value.filter((todo) => !todo.done)
+		const now = Date.now()
+		todos.value.forEach((todo) => {
+			if (todo.done && !todo.removedAt) todo.removedAt = now
+		})
 	}
 
+	const activeTodos = computed(() => todos.value.filter((t) => !t.removedAt))
+
 	const filteredTodos = computed(() => {
-		let list = todos.value
+		let list = activeTodos.value
 		if (filter.value === 'active') list = list.filter((t) => !t.done)
 		if (filter.value === 'completed') list = list.filter((t) => t.done)
 		return [...list].sort(
@@ -47,8 +83,12 @@ export function useTodos() {
 		)
 	})
 
-	const totalCount = computed(() => todos.value.length)
-	const remainingCount = computed(() => todos.value.filter((t) => !t.done).length)
+	const removedTodos = computed(() =>
+		[...todos.value].filter((t) => t.removedAt).sort((a, b) => b.removedAt - a.removedAt)
+	)
+
+	const totalCount = computed(() => activeTodos.value.length)
+	const remainingCount = computed(() => activeTodos.value.filter((t) => !t.done).length)
 	const progress = computed(() =>
 		totalCount.value ? Math.round(((totalCount.value - remainingCount.value) / totalCount.value) * 100) : 0
 	)
@@ -56,8 +96,12 @@ export function useTodos() {
 	return {
 		filter,
 		filteredTodos,
+		removedTodos,
 		addTodo,
+		toggleTodo,
 		removeTodo,
+		restoreTodo,
+		deleteTodoPermanently,
 		clearCompleted,
 		totalCount,
 		remainingCount,

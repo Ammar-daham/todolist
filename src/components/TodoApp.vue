@@ -7,12 +7,17 @@ import TodoInput from './TodoInput.vue'
 import TodoProgress from './TodoProgress.vue'
 import TodoFilters from './TodoFilters.vue'
 import TodoList from './TodoList.vue'
+import TodoRemovedList from './TodoRemovedList.vue'
 
 const {
 	filter,
 	filteredTodos,
+	removedTodos,
 	addTodo,
+	toggleTodo,
 	removeTodo,
+	restoreTodo,
+	deleteTodoPermanently,
 	clearCompleted,
 	totalCount,
 	remainingCount,
@@ -32,18 +37,19 @@ const { isDark, toggleTheme } = useTheme()
 
 				<TodoInput @add="addTodo" />
 
-				<template v-if="totalCount">
-					<TodoProgress :remaining-count="remainingCount" :total-count="totalCount" :progress="progress" />
-					<TodoFilters v-model="filter" />
-				</template>
+				<TodoProgress v-if="totalCount" :remaining-count="remainingCount" :total-count="totalCount" :progress="progress" />
+				<TodoFilters v-model="filter" />
 
 				<TodoList
+					v-if="filter !== 'removed'"
 					:todos="filteredTodos"
 					:total-count="totalCount"
 					:remaining-count="remainingCount"
+					@toggle="toggleTodo"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
 				/>
+				<TodoRemovedList v-else :todos="removedTodos" @restore="restoreTodo" @delete="deleteTodoPermanently" />
 			</div>
 		</div>
 	</div>

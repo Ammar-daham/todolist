@@ -1,10 +1,11 @@
 <script setup>
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
+import { formatRelativeTime } from '../utils/time'
 
 defineProps({
 	todo: { type: Object, required: true },
 })
-defineEmits(['remove'])
+defineEmits(['toggle', 'remove'])
 </script>
 
 <template>
@@ -14,12 +15,18 @@ defineEmits(['remove'])
 		:style="{ borderInlineStartColor: PRIORITIES[todo.priority || 'medium'].color }"
 	>
 		<label class="todo-check flex-shrink-0" :class="{ checked: todo.done }">
-			<input type="checkbox" v-model="todo.done" />
+			<input type="checkbox" :checked="todo.done" @change="$emit('toggle', todo.id)" />
 			<span class="todo-check-box">
 				<i class="bi bi-check-lg"></i>
 			</span>
 		</label>
-		<span class="flex-grow-1 todo-text">{{ todo.text }}</span>
+		<div class="flex-grow-1 todo-content">
+			<span class="todo-text">{{ todo.text }}</span>
+			<div class="todo-meta small text-muted">
+				<span>Created {{ formatRelativeTime(todo.createdAt) }}</span>
+				<span v-if="todo.completedAt"> · Completed {{ formatRelativeTime(todo.completedAt) }}</span>
+			</div>
+		</div>
 		<div class="dropdown flex-shrink-0">
 			<button
 				type="button"
@@ -89,6 +96,10 @@ defineEmits(['remove'])
 	display: inline-block;
 }
 
+.todo-content {
+	min-width: 0;
+}
+
 .todo-text {
 	word-break: break-word;
 	transition: color 0.2s ease;
@@ -97,6 +108,11 @@ defineEmits(['remove'])
 .todo-item-done .todo-text {
 	text-decoration: line-through;
 	color: var(--text-done);
+}
+
+.todo-meta {
+	margin-top: 2px;
+	font-size: 0.72rem;
 }
 
 .todo-check {
