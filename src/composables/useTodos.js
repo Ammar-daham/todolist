@@ -23,6 +23,7 @@ export function useTodos() {
 	const todos = ref(loadTodos())
 	const filter = ref('all')
 	const priorityFilter = ref('all')
+	const searchQuery = ref('')
 
 	watch(
 		todos,
@@ -87,9 +88,16 @@ export function useTodos() {
 		})
 	}
 
-	const visibleTodos = computed(() =>
-		todos.value.filter((t) => priorityFilter.value === 'all' || (t.priority || 'medium') === priorityFilter.value)
-	)
+	const visibleTodos = computed(() => {
+		const query = searchQuery.value.trim().toLowerCase()
+		return todos.value.filter((t) => {
+			const matchesPriority = priorityFilter.value === 'all' || (t.priority || 'medium') === priorityFilter.value
+			const matchesSearch = !query || t.text.toLowerCase().includes(query)
+			return matchesPriority && matchesSearch
+		})
+	})
+
+	const hasAnyTodos = computed(() => todos.value.some((t) => !t.removedAt))
 
 	const activeTodos = computed(() => visibleTodos.value.filter((t) => !t.removedAt))
 
@@ -117,9 +125,11 @@ export function useTodos() {
 	return {
 		filter,
 		priorityFilter,
+		searchQuery,
 		filteredTodos,
 		removedTodos,
 		allTodos,
+		hasAnyTodos,
 		addTodo,
 		editTodo,
 		setDueDate,

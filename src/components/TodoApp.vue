@@ -5,6 +5,7 @@ import ThemeToggle from './ThemeToggle.vue'
 import TodoHeader from './TodoHeader.vue'
 import TodoInput from './TodoInput.vue'
 import TodoProgress from './TodoProgress.vue'
+import TodoSearch from './TodoSearch.vue'
 import TodoFilters from './TodoFilters.vue'
 import PriorityFilter from './PriorityFilter.vue'
 import TodoList from './TodoList.vue'
@@ -14,9 +15,11 @@ import TodoHistory from './TodoHistory.vue'
 const {
 	filter,
 	priorityFilter,
+	searchQuery,
 	filteredTodos,
 	removedTodos,
 	allTodos,
+	hasAnyTodos,
 	addTodo,
 	editTodo,
 	setDueDate,
@@ -44,6 +47,7 @@ const { isDark, toggleTheme } = useTheme()
 				<TodoInput @add="addTodo" />
 
 				<TodoProgress v-if="totalCount" :remaining-count="remainingCount" :total-count="totalCount" :progress="progress" />
+				<TodoSearch v-model="searchQuery" />
 				<TodoFilters v-model="filter" />
 				<PriorityFilter v-model="priorityFilter" />
 
@@ -52,6 +56,7 @@ const { isDark, toggleTheme } = useTheme()
 					:todos="filteredTodos"
 					:total-count="totalCount"
 					:remaining-count="remainingCount"
+					:has-any-todos="hasAnyTodos"
 					@toggle="toggleTodo"
 					@edit="editTodo"
 					@set-due-date="setDueDate"

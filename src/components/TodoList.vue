@@ -5,6 +5,7 @@ defineProps({
 	todos: { type: Array, required: true },
 	totalCount: { type: Number, required: true },
 	remainingCount: { type: Number, required: true },
+	hasAnyTodos: { type: Boolean, required: true },
 })
 defineEmits(['toggle', 'edit', 'set-due-date', 'remove', 'clear-completed'])
 </script>
@@ -22,14 +23,19 @@ defineEmits(['toggle', 'edit', 'set-due-date', 'remove', 'clear-completed'])
 		/>
 	</transition-group>
 
-	<div v-if="totalCount && !todos.length" class="text-center text-muted py-5">
-		<i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
-		Nothing here yet.
-	</div>
-
-	<div v-if="!totalCount" class="text-center text-muted py-5">
+	<div v-if="!hasAnyTodos" class="text-center text-muted py-5">
 		<i class="bi bi-clipboard-check fs-1 d-block mb-2 opacity-50"></i>
 		Your list is empty. Add your first task above!
+	</div>
+
+	<div v-else-if="!totalCount" class="text-center text-muted py-5">
+		<i class="bi bi-search fs-1 d-block mb-2 opacity-50"></i>
+		No tasks match your search or filters.
+	</div>
+
+	<div v-else-if="!todos.length" class="text-center text-muted py-5">
+		<i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+		Nothing here yet.
 	</div>
 
 	<div v-if="remainingCount !== totalCount" class="text-end mt-3">
