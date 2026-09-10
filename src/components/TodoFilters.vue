@@ -9,6 +9,7 @@ const filters = [
 	{ key: 'active', label: 'Active' },
 	{ key: 'completed', label: 'Completed' },
 	{ key: 'removed', label: 'Removed' },
+	{ key: 'history', label: 'History' },
 ]
 </script>
 

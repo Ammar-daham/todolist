@@ -87,6 +87,8 @@ export function useTodos() {
 		[...todos.value].filter((t) => t.removedAt).sort((a, b) => b.removedAt - a.removedAt)
 	)
 
+	const allTodos = computed(() => todos.value)
+
 	const totalCount = computed(() => activeTodos.value.length)
 	const remainingCount = computed(() => activeTodos.value.filter((t) => !t.done).length)
 	const progress = computed(() =>
@@ -97,6 +99,7 @@ export function useTodos() {
 		filter,
 		filteredTodos,
 		removedTodos,
+		allTodos,
 		addTodo,
 		toggleTodo,
 		removeTodo,
