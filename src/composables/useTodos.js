@@ -45,6 +45,13 @@ export function useTodos() {
 		})
 	}
 
+	function editTodo(id, text) {
+		const trimmed = text.trim()
+		if (!trimmed) return
+		const todo = todos.value.find((t) => t.id === id)
+		if (todo) todo.text = trimmed
+	}
+
 	function toggleTodo(id) {
 		const todo = todos.value.find((t) => t.id === id)
 		if (!todo) return
@@ -107,6 +114,7 @@ export function useTodos() {
 		removedTodos,
 		allTodos,
 		addTodo,
+		editTodo,
 		toggleTodo,
 		removeTodo,
 		restoreTodo,

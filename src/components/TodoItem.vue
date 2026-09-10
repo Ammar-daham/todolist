@@ -1,11 +1,35 @@
 <script setup>
+import { ref, nextTick } from 'vue'
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
 import { formatRelativeTime } from '../utils/time'
 
-defineProps({
+const props = defineProps({
 	todo: { type: Object, required: true },
 })
-defineEmits(['toggle', 'remove'])
+const emit = defineEmits(['toggle', 'edit', 'remove'])
+
+const isEditing = ref(false)
+const draftText = ref('')
+const editInput = ref(null)
+
+function startEdit() {
+	draftText.value = props.todo.text
+	isEditing.value = true
+	nextTick(() => editInput.value?.focus())
+}
+
+function saveEdit() {
+	if (!isEditing.value) return
+	isEditing.value = false
+	const trimmed = draftText.value.trim()
+	if (trimmed && trimmed !== props.todo.text) {
+		emit('edit', props.todo.id, trimmed)
+	}
+}
+
+function cancelEdit() {
+	isEditing.value = false
+}
 </script>
 
 <template>
@@ -21,39 +45,56 @@ defineEmits(['toggle', 'remove'])
 			</span>
 		</label>
 		<div class="flex-grow-1 todo-content">
-			<span class="todo-text">{{ todo.text }}</span>
-			<div class="todo-meta small text-muted">
-				<span>Created {{ formatRelativeTime(todo.createdAt) }}</span>
-				<span v-if="todo.completedAt"> · Completed {{ formatRelativeTime(todo.completedAt) }}</span>
-			</div>
+			<input
+				v-if="isEditing"
+				ref="editInput"
+				v-model="draftText"
+				type="text"
+				class="form-control form-control-sm todo-edit-input"
+				@keyup.enter="saveEdit"
+				@keyup.esc="cancelEdit"
+				@blur="saveEdit"
+			/>
+			<template v-else>
+				<span class="todo-text" @dblclick="startEdit">{{ todo.text }}</span>
+				<div class="todo-meta small text-muted">
+					<span>Created {{ formatRelativeTime(todo.createdAt) }}</span>
+					<span v-if="todo.completedAt"> · Completed {{ formatRelativeTime(todo.completedAt) }}</span>
+				</div>
+			</template>
 		</div>
-		<div class="dropdown flex-shrink-0">
+		<template v-if="!isEditing">
+			<div class="dropdown flex-shrink-0">
+				<button
+					type="button"
+					class="btn btn-sm priority-badge"
+					:class="`badge-${PRIORITIES[todo.priority || 'medium'].badge}`"
+					data-bs-toggle="dropdown"
+					aria-expanded="false"
+				>
+					{{ PRIORITIES[todo.priority || 'medium'].label }}
+				</button>
+				<ul class="dropdown-menu dropdown-menu-end">
+					<li v-for="key in PRIORITY_ORDER" :key="key">
+						<button type="button" class="dropdown-item d-flex align-items-center gap-2" @click="todo.priority = key">
+							<span class="priority-dot" :style="{ background: PRIORITIES[key].color }"></span>
+							{{ PRIORITIES[key].label }}
+						</button>
+					</li>
+				</ul>
+			</div>
+			<button type="button" class="btn btn-sm btn-icon text-muted" @click="startEdit" aria-label="Edit todo">
+				<i class="bi bi-pencil"></i>
+			</button>
 			<button
 				type="button"
-				class="btn btn-sm priority-badge"
-				:class="`badge-${PRIORITIES[todo.priority || 'medium'].badge}`"
-				data-bs-toggle="dropdown"
-				aria-expanded="false"
+				class="btn btn-sm btn-icon text-muted"
+				@click="$emit('remove', todo.id)"
+				aria-label="Delete todo"
 			>
-				{{ PRIORITIES[todo.priority || 'medium'].label }}
+				<i class="bi bi-trash3"></i>
 			</button>
-			<ul class="dropdown-menu dropdown-menu-end">
-				<li v-for="key in PRIORITY_ORDER" :key="key">
-					<button type="button" class="dropdown-item d-flex align-items-center gap-2" @click="todo.priority = key">
-						<span class="priority-dot" :style="{ background: PRIORITIES[key].color }"></span>
-						{{ PRIORITIES[key].label }}
-					</button>
-				</li>
-			</ul>
-		</div>
-		<button
-			type="button"
-			class="btn btn-sm btn-icon text-muted"
-			@click="$emit('remove', todo.id)"
-			aria-label="Delete todo"
-		>
-			<i class="bi bi-trash3"></i>
-		</button>
+		</template>
 	</li>
 </template>
 
@@ -113,6 +154,16 @@ defineEmits(['toggle', 'remove'])
 .todo-meta {
 	margin-top: 2px;
 	font-size: 0.72rem;
+}
+
+.todo-edit-input {
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+}
+.todo-edit-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
 }
 
 .todo-check {

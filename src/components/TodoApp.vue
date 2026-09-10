@@ -18,6 +18,7 @@ const {
 	removedTodos,
 	allTodos,
 	addTodo,
+	editTodo,
 	toggleTodo,
 	removeTodo,
 	restoreTodo,
@@ -51,6 +52,7 @@ const { isDark, toggleTheme } = useTheme()
 					:total-count="totalCount"
 					:remaining-count="remainingCount"
 					@toggle="toggleTodo"
+					@edit="editTodo"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
 				/>
