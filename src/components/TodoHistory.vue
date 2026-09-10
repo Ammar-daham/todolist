@@ -20,7 +20,7 @@ const EVENT_META = {
 </script>
 
 <template>
-	<div class="history-granularity btn-group w-100 mb-3" role="group">
+	<div class="history-granularity d-flex flex-wrap gap-2 mb-3" role="group">
 		<button
 			v-for="g in HISTORY_GRANULARITIES"
 			:key="g.key"
@@ -76,15 +76,8 @@ const EVENT_META = {
 
 .history-granularity .btn {
 	border-radius: 10px !important;
-	margin: 0 3px;
 	font-weight: 500;
 	font-size: 0.9rem;
-}
-.history-granularity .btn:first-child {
-	margin-left: 0;
-}
-.history-granularity .btn:last-child {
-	margin-right: 0;
 }
 
 .history-list {

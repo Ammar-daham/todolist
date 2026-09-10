@@ -8,7 +8,7 @@ defineEmits(['update:modelValue'])
 </script>
 
 <template>
-	<div class="btn-group w-100 mb-3 priority-filter" role="group">
+	<div class="d-flex flex-wrap gap-2 mb-3 priority-filter" role="group">
 		<button
 			type="button"
 			class="btn"
@@ -56,15 +56,8 @@ defineEmits(['update:modelValue'])
 .priority-filter .btn {
 	border: none;
 	border-radius: 10px !important;
-	margin: 0 3px;
 	font-weight: 500;
 	font-size: 0.85rem;
-}
-.priority-filter .btn:first-child {
-	margin-left: 0;
-}
-.priority-filter .btn:last-child {
-	margin-right: 0;
 }
 
 .badge-danger {

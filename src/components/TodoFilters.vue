@@ -14,7 +14,7 @@ const filters = [
 </script>
 
 <template>
-	<div class="btn-group w-100 mb-3 filter-group" role="group">
+	<div class="d-flex flex-wrap gap-2 mb-3 filter-group" role="group">
 		<button
 			v-for="f in filters"
 			:key="f.key"
@@ -52,14 +52,7 @@ const filters = [
 
 .filter-group .btn {
 	border-radius: 10px !important;
-	margin: 0 3px;
 	font-weight: 500;
 	font-size: 0.9rem;
-}
-.filter-group .btn:first-child {
-	margin-left: 0;
-}
-.filter-group .btn:last-child {
-	margin-right: 0;
 }
 </style>

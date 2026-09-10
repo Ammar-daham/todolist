@@ -29,19 +29,23 @@ function submit() {
 				class="form-control border-start-0 ps-0"
 				placeholder="What needs to be done?"
 			/>
-			<select v-model="priority" class="form-select flex-grow-0 w-auto priority-select" aria-label="Priority">
-				<option v-for="key in PRIORITY_ORDER" :key="key" :value="key">{{ PRIORITIES[key].label }}</option>
-			</select>
-			<button class="btn btn-accent px-4" type="submit" :disabled="!text.trim()">
-				Add
-			</button>
 		</div>
 
-		<div class="due-date-row d-flex align-items-center gap-2">
-			<i class="bi bi-calendar-event text-muted"></i>
-			<input v-model="dueDate" type="date" class="form-control form-control-sm due-date-input" aria-label="Due date (optional)" />
-			<button v-if="dueDate" type="button" class="btn btn-sm btn-link text-muted p-0 due-date-clear" @click="dueDate = ''">
-				Clear
+		<div class="todo-input-controls d-flex flex-wrap align-items-center gap-2">
+			<select v-model="priority" class="form-select form-select-sm w-auto priority-select" aria-label="Priority">
+				<option v-for="key in PRIORITY_ORDER" :key="key" :value="key">{{ PRIORITIES[key].label }}</option>
+			</select>
+
+			<div class="due-date-row d-flex align-items-center gap-2">
+				<i class="bi bi-calendar-event text-muted"></i>
+				<input v-model="dueDate" type="date" class="form-control form-control-sm due-date-input" aria-label="Due date (optional)" />
+				<button v-if="dueDate" type="button" class="btn btn-sm btn-link text-muted p-0 due-date-clear" @click="dueDate = ''">
+					Clear
+				</button>
+			</div>
+
+			<button class="btn btn-accent px-4 ms-auto" type="submit" :disabled="!text.trim()">
+				Add
 			</button>
 		</div>
 	</form>
@@ -75,12 +79,8 @@ function submit() {
 	border-color: var(--accent);
 }
 
-.due-date-row {
-	padding-left: 4px;
-}
-
 .due-date-input {
-	max-width: 170px;
+	max-width: 150px;
 	background: var(--surface);
 	border-color: var(--border);
 	color: inherit;
