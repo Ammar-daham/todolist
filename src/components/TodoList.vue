@@ -6,7 +6,7 @@ defineProps({
 	totalCount: { type: Number, required: true },
 	remainingCount: { type: Number, required: true },
 })
-defineEmits(['toggle', 'edit', 'remove', 'clear-completed'])
+defineEmits(['toggle', 'edit', 'set-due-date', 'remove', 'clear-completed'])
 </script>
 
 <template>
@@ -17,6 +17,7 @@ defineEmits(['toggle', 'edit', 'remove', 'clear-completed'])
 			:todo="todo"
 			@toggle="$emit('toggle', $event)"
 			@edit="(id, text) => $emit('edit', id, text)"
+			@set-due-date="(id, date) => $emit('set-due-date', id, date)"
 			@remove="$emit('remove', $event)"
 		/>
 	</transition-group>

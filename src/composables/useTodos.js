@@ -10,6 +10,7 @@ function loadTodos() {
 		return parsed.map((todo) => ({
 			completedAt: null,
 			removedAt: null,
+			dueDate: null,
 			...todo,
 			createdAt: todo.createdAt ?? Date.now(),
 		}))
@@ -31,7 +32,7 @@ export function useTodos() {
 		{ deep: true }
 	)
 
-	function addTodo(text, priority) {
+	function addTodo(text, priority, dueDate = null) {
 		const trimmed = text.trim()
 		if (!trimmed) return
 		todos.value.push({
@@ -39,6 +40,7 @@ export function useTodos() {
 			text: trimmed,
 			done: false,
 			priority,
+			dueDate,
 			createdAt: Date.now(),
 			completedAt: null,
 			removedAt: null,
@@ -50,6 +52,11 @@ export function useTodos() {
 		if (!trimmed) return
 		const todo = todos.value.find((t) => t.id === id)
 		if (todo) todo.text = trimmed
+	}
+
+	function setDueDate(id, dueDate) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (todo) todo.dueDate = dueDate || null
 	}
 
 	function toggleTodo(id) {
@@ -115,6 +122,7 @@ export function useTodos() {
 		allTodos,
 		addTodo,
 		editTodo,
+		setDueDate,
 		toggleTodo,
 		removeTodo,
 		restoreTodo,

@@ -1,12 +1,12 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
-import { formatRelativeTime } from '../utils/time'
+import { formatRelativeTime, formatDueDate, getDueStatus } from '../utils/time'
 
 const props = defineProps({
 	todo: { type: Object, required: true },
 })
-const emit = defineEmits(['toggle', 'edit', 'remove'])
+const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'remove'])
 
 const isEditing = ref(false)
 const draftText = ref('')
@@ -29,6 +29,32 @@ function saveEdit() {
 
 function cancelEdit() {
 	isEditing.value = false
+}
+
+const isEditingDue = ref(false)
+const draftDue = ref('')
+const dueInput = ref(null)
+const dueStatus = computed(() => getDueStatus(props.todo.dueDate, props.todo.done))
+
+function startEditDue() {
+	draftDue.value = props.todo.dueDate || ''
+	isEditingDue.value = true
+	nextTick(() => dueInput.value?.focus())
+}
+
+function saveEditDue() {
+	if (!isEditingDue.value) return
+	isEditingDue.value = false
+	emit('set-due-date', props.todo.id, draftDue.value || null)
+}
+
+function cancelEditDue() {
+	isEditingDue.value = false
+}
+
+function clearDue() {
+	isEditingDue.value = false
+	emit('set-due-date', props.todo.id, null)
 }
 </script>
 
@@ -60,6 +86,30 @@ function cancelEdit() {
 				<div class="todo-meta small text-muted">
 					<span>Created {{ formatRelativeTime(todo.createdAt) }}</span>
 					<span v-if="todo.completedAt"> · Completed {{ formatRelativeTime(todo.completedAt) }}</span>
+				</div>
+
+				<div v-if="!isEditingDue" class="todo-due-row">
+					<button
+						type="button"
+						class="due-badge"
+						:class="todo.dueDate ? `due-${dueStatus}` : 'due-empty'"
+						@click="startEditDue"
+					>
+						<i class="bi bi-calendar-event"></i>
+						{{ todo.dueDate ? formatDueDate(todo.dueDate) : 'Add due date' }}
+					</button>
+				</div>
+				<div v-else class="due-edit d-flex align-items-center gap-2">
+					<input
+						ref="dueInput"
+						v-model="draftDue"
+						type="date"
+						class="form-control form-control-sm due-edit-input"
+						@keyup.enter="saveEditDue"
+						@keyup.esc="cancelEditDue"
+						@blur="saveEditDue"
+					/>
+					<button type="button" class="btn btn-sm btn-link p-0 due-clear" @mousedown.prevent="clearDue">Clear</button>
 				</div>
 			</template>
 		</div>
@@ -164,6 +214,71 @@ function cancelEdit() {
 .todo-edit-input:focus {
 	box-shadow: none;
 	border-color: var(--accent);
+}
+
+.todo-due-row {
+	margin-top: 4px;
+}
+
+.due-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: none;
+	border-radius: 999px;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	font-weight: 600;
+	cursor: pointer;
+	background: var(--surface-alt-hover);
+	color: var(--text-done);
+}
+.due-badge:hover {
+	filter: brightness(0.96);
+}
+
+.due-empty {
+	background: transparent;
+	border: 1px dashed var(--border);
+	color: var(--text-done);
+	opacity: 0.6;
+}
+.due-empty:hover {
+	opacity: 1;
+}
+
+.due-overdue {
+	background: var(--danger-bg);
+	color: var(--danger);
+}
+.due-upcoming {
+	background: var(--warning-bg);
+	color: var(--warning);
+}
+.due-done {
+	text-decoration: line-through;
+}
+
+.due-edit {
+	margin-top: 4px;
+}
+.due-edit-input {
+	max-width: 160px;
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+}
+.due-edit-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+.due-clear {
+	font-size: 0.72rem;
+	color: var(--danger);
+	text-decoration: none;
+}
+.due-clear:hover {
+	text-decoration: underline;
 }
 
 .todo-check {

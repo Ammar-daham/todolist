@@ -19,6 +19,7 @@ const {
 	allTodos,
 	addTodo,
 	editTodo,
+	setDueDate,
 	toggleTodo,
 	removeTodo,
 	restoreTodo,
@@ -53,6 +54,7 @@ const { isDark, toggleTheme } = useTheme()
 					:remaining-count="remainingCount"
 					@toggle="toggleTodo"
 					@edit="editTodo"
+					@set-due-date="setDueDate"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
 				/>

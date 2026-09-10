@@ -6,32 +6,44 @@ const emit = defineEmits(['add'])
 
 const text = ref('')
 const priority = ref('medium')
+const dueDate = ref('')
 
 function submit() {
 	if (!text.value.trim()) return
-	emit('add', text.value, priority.value)
+	emit('add', text.value, priority.value, dueDate.value || null)
 	text.value = ''
 	priority.value = 'medium'
+	dueDate.value = ''
 }
 </script>
 
 <template>
-	<form class="input-group input-group-lg mb-4 todo-input-group" @submit.prevent="submit">
-		<span class="input-group-text border-end-0">
-			<i class="bi bi-plus-lg text-muted"></i>
-		</span>
-		<input
-			v-model="text"
-			type="text"
-			class="form-control border-start-0 ps-0"
-			placeholder="What needs to be done?"
-		/>
-		<select v-model="priority" class="form-select flex-grow-0 w-auto priority-select" aria-label="Priority">
-			<option v-for="key in PRIORITY_ORDER" :key="key" :value="key">{{ PRIORITIES[key].label }}</option>
-		</select>
-		<button class="btn btn-accent px-4" type="submit" :disabled="!text.trim()">
-			Add
-		</button>
+	<form class="mb-4" @submit.prevent="submit">
+		<div class="input-group input-group-lg todo-input-group mb-2">
+			<span class="input-group-text border-end-0">
+				<i class="bi bi-plus-lg text-muted"></i>
+			</span>
+			<input
+				v-model="text"
+				type="text"
+				class="form-control border-start-0 ps-0"
+				placeholder="What needs to be done?"
+			/>
+			<select v-model="priority" class="form-select flex-grow-0 w-auto priority-select" aria-label="Priority">
+				<option v-for="key in PRIORITY_ORDER" :key="key" :value="key">{{ PRIORITIES[key].label }}</option>
+			</select>
+			<button class="btn btn-accent px-4" type="submit" :disabled="!text.trim()">
+				Add
+			</button>
+		</div>
+
+		<div class="due-date-row d-flex align-items-center gap-2">
+			<i class="bi bi-calendar-event text-muted"></i>
+			<input v-model="dueDate" type="date" class="form-control form-control-sm due-date-input" aria-label="Due date (optional)" />
+			<button v-if="dueDate" type="button" class="btn btn-sm btn-link text-muted p-0 due-date-clear" @click="dueDate = ''">
+				Clear
+			</button>
+		</div>
 	</form>
 </template>
 
@@ -61,5 +73,28 @@ function submit() {
 .btn-accent:disabled {
 	background: var(--accent);
 	border-color: var(--accent);
+}
+
+.due-date-row {
+	padding-left: 4px;
+}
+
+.due-date-input {
+	max-width: 170px;
+	background: var(--surface);
+	border-color: var(--border);
+	color: inherit;
+}
+.due-date-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+
+.due-date-clear {
+	font-size: 0.8rem;
+	text-decoration: none;
+}
+.due-date-clear:hover {
+	text-decoration: underline;
 }
 </style>
