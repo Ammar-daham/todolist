@@ -1,5 +1,60 @@
+:root {
+  --accent: #6a5cf5;
+  --accent-strong: #5646e0;
+  --accent-soft: rgba(106, 92, 245, 0.12);
+  --accent-contrast: #ffffff;
+
+  --bg-start: #6a5cf5;
+  --bg-mid: #7f6ff8;
+  --bg-end: #a78bfa;
+
+  --surface: #ffffff;
+  --surface-alt: #f8f9fc;
+  --surface-alt-hover: #f0f1fa;
+  --border: #dfe1e8;
+
+  --checkbox-bg: #ffffff;
+  --checkbox-border: #ced4da;
+  --text-done: #adb5bd;
+
+  --danger: #dc3545;
+  --danger-bg: rgba(220, 53, 69, 0.12);
+  --warning: #b8590a;
+  --warning-bg: rgba(253, 126, 20, 0.14);
+  --success: #198754;
+  --success-bg: rgba(25, 135, 84, 0.12);
+}
+
+[data-bs-theme='dark'] {
+  --accent: #8d7fff;
+  --accent-strong: #a79bff;
+  --accent-soft: rgba(141, 127, 255, 0.18);
+  --accent-contrast: #14101f;
+
+  --bg-start: #14121f;
+  --bg-mid: #1e1a33;
+  --bg-end: #2b2350;
+
+  --surface: #1c1930;
+  --surface-alt: #262341;
+  --surface-alt-hover: #302c4d;
+  --border: #4c4870;
+
+  --checkbox-bg: #1c1a2e;
+  --checkbox-border: #4c4870;
+  --text-done: #726e94;
+
+  --danger: #ff8b96;
+  --danger-bg: rgba(220, 53, 69, 0.25);
+  --warning: #ffb066;
+  --warning-bg: rgba(253, 126, 20, 0.25);
+  --success: #6fe3ab;
+  --success-bg: rgba(25, 135, 84, 0.25);
+}
+
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #6a5cf5 0%, #7f6ff8 40%, #a78bfa 100%);
+  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-mid) 40%, var(--bg-end) 100%);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  transition: background 0.3s ease;
 }
