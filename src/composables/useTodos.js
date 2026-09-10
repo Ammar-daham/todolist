@@ -21,6 +21,7 @@ function loadTodos() {
 export function useTodos() {
 	const todos = ref(loadTodos())
 	const filter = ref('all')
+	const priorityFilter = ref('all')
 
 	watch(
 		todos,
@@ -72,7 +73,11 @@ export function useTodos() {
 		})
 	}
 
-	const activeTodos = computed(() => todos.value.filter((t) => !t.removedAt))
+	const visibleTodos = computed(() =>
+		todos.value.filter((t) => priorityFilter.value === 'all' || (t.priority || 'medium') === priorityFilter.value)
+	)
+
+	const activeTodos = computed(() => visibleTodos.value.filter((t) => !t.removedAt))
 
 	const filteredTodos = computed(() => {
 		let list = activeTodos.value
@@ -84,10 +89,10 @@ export function useTodos() {
 	})
 
 	const removedTodos = computed(() =>
-		[...todos.value].filter((t) => t.removedAt).sort((a, b) => b.removedAt - a.removedAt)
+		[...visibleTodos.value].filter((t) => t.removedAt).sort((a, b) => b.removedAt - a.removedAt)
 	)
 
-	const allTodos = computed(() => todos.value)
+	const allTodos = computed(() => visibleTodos.value)
 
 	const totalCount = computed(() => activeTodos.value.length)
 	const remainingCount = computed(() => activeTodos.value.filter((t) => !t.done).length)
@@ -97,6 +102,7 @@ export function useTodos() {
 
 	return {
 		filter,
+		priorityFilter,
 		filteredTodos,
 		removedTodos,
 		allTodos,

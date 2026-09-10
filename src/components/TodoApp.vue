@@ -6,12 +6,14 @@ import TodoHeader from './TodoHeader.vue'
 import TodoInput from './TodoInput.vue'
 import TodoProgress from './TodoProgress.vue'
 import TodoFilters from './TodoFilters.vue'
+import PriorityFilter from './PriorityFilter.vue'
 import TodoList from './TodoList.vue'
 import TodoRemovedList from './TodoRemovedList.vue'
 import TodoHistory from './TodoHistory.vue'
 
 const {
 	filter,
+	priorityFilter,
 	filteredTodos,
 	removedTodos,
 	allTodos,
@@ -41,6 +43,7 @@ const { isDark, toggleTheme } = useTheme()
 
 				<TodoProgress v-if="totalCount" :remaining-count="remainingCount" :total-count="totalCount" :progress="progress" />
 				<TodoFilters v-model="filter" />
+				<PriorityFilter v-model="priorityFilter" />
 
 				<TodoList
 					v-if="filter === 'all' || filter === 'active' || filter === 'completed'"
