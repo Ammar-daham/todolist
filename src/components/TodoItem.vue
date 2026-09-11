@@ -6,7 +6,7 @@ import { formatRelativeTime, formatDueDate, getDueStatus } from '../utils/time'
 const props = defineProps({
 	todo: { type: Object, required: true },
 })
-const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'remove'])
+const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'set-priority', 'remove'])
 
 const isEditing = ref(false)
 const draftText = ref('')
@@ -126,7 +126,11 @@ function clearDue() {
 				</button>
 				<ul class="dropdown-menu dropdown-menu-end">
 					<li v-for="key in PRIORITY_ORDER" :key="key">
-						<button type="button" class="dropdown-item d-flex align-items-center gap-2" @click="todo.priority = key">
+						<button
+							type="button"
+							class="dropdown-item d-flex align-items-center gap-2"
+							@click="emit('set-priority', todo.id, key)"
+						>
 							<span class="priority-dot" :style="{ background: PRIORITIES[key].color }"></span>
 							{{ PRIORITIES[key].label }}
 						</button>

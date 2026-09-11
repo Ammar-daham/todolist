@@ -30,10 +30,22 @@ export function useTodos() {
 	const priorityFilters = ref([])
 	const searchQuery = ref('')
 
+	// localStorage is our only persistence layer, so a write failure (quota
+	// exceeded, private browsing lockdown, etc.) must never pass silently —
+	// the user would otherwise keep working on tasks that are quietly not
+	// being saved. `saveError` lets the UI surface that to them.
+	const saveError = ref(null)
+
 	watch(
 		todos,
 		(value) => {
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+			try {
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+				saveError.value = null
+			} catch (err) {
+				saveError.value = err
+				console.error('Failed to save todos to localStorage:', err)
+			}
 		},
 		{ deep: true }
 	)
@@ -63,6 +75,11 @@ export function useTodos() {
 	function setDueDate(id, dueDate) {
 		const todo = todos.value.find((t) => t.id === id)
 		if (todo) todo.dueDate = dueDate || null
+	}
+
+	function setPriority(id, priority) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (todo) todo.priority = priority
 	}
 
 	function toggleTodo(id) {
@@ -155,9 +172,11 @@ export function useTodos() {
 		removedTodos,
 		allTodos,
 		hasAnyTodos,
+		saveError,
 		addTodo,
 		editTodo,
 		setDueDate,
+		setPriority,
 		toggleTodo,
 		removeTodo,
 		restoreTodo,

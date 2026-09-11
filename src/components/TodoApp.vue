@@ -22,9 +22,11 @@ const {
 	removedTodos,
 	allTodos,
 	hasAnyTodos,
+	saveError,
 	addTodo,
 	editTodo,
 	setDueDate,
+	setPriority,
 	toggleTodo,
 	removeTodo,
 	restoreTodo,
@@ -45,6 +47,11 @@ const { isDark, toggleTheme } = useTheme()
 				<ThemeToggle :is-dark="isDark" @toggle="toggleTheme" />
 
 				<TodoHeader />
+
+				<div v-if="saveError" class="save-error d-flex align-items-start gap-2 mb-3" role="alert">
+					<i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+					<span>Couldn't save your changes to this device's storage — they may be lost on refresh.</span>
+				</div>
 
 				<TodoInput @add="addTodo" />
 
@@ -69,6 +76,7 @@ const { isDark, toggleTheme } = useTheme()
 					@toggle="toggleTodo"
 					@edit="editTodo"
 					@set-due-date="setDueDate"
+					@set-priority="setPriority"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
 				/>
@@ -85,6 +93,14 @@ const { isDark, toggleTheme } = useTheme()
 </template>
 
 <style scoped>
+.save-error {
+	background: var(--danger-bg);
+	color: var(--danger);
+	border-radius: 10px;
+	padding: 10px 14px;
+	font-size: 0.85rem;
+}
+
 .todo-card {
 	max-width: 560px;
 	border-radius: 20px;
