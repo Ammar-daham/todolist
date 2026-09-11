@@ -6,7 +6,7 @@ defineEmits(['update:modelValue'])
 </script>
 
 <template>
-	<div class="input-group input-group-sm todo-search mb-3">
+	<div class="input-group input-group-sm todo-search">
 		<span class="input-group-text border-end-0">
 			<i class="bi bi-search text-muted"></i>
 		</span>

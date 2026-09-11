@@ -5,17 +5,19 @@ import ThemeToggle from './ThemeToggle.vue'
 import TodoHeader from './TodoHeader.vue'
 import TodoInput from './TodoInput.vue'
 import TodoProgress from './TodoProgress.vue'
-import TodoSearch from './TodoSearch.vue'
-import TodoFilters from './TodoFilters.vue'
-import PriorityFilter from './PriorityFilter.vue'
+import TodoToolbar from './TodoToolbar.vue'
 import TodoList from './TodoList.vue'
 import TodoRemovedList from './TodoRemovedList.vue'
 import TodoHistory from './TodoHistory.vue'
 
 const {
-	filter,
-	priorityFilter,
+	view,
+	statusFilter,
+	priorityFilters,
 	searchQuery,
+	hasActiveFilters,
+	togglePriorityFilter,
+	clearFilters,
 	filteredTodos,
 	removedTodos,
 	allTodos,
@@ -47,12 +49,19 @@ const { isDark, toggleTheme } = useTheme()
 				<TodoInput @add="addTodo" />
 
 				<TodoProgress v-if="totalCount" :remaining-count="remainingCount" :total-count="totalCount" :progress="progress" />
-				<TodoSearch v-model="searchQuery" />
-				<TodoFilters v-model="filter" />
-				<PriorityFilter v-model="priorityFilter" />
+
+				<TodoToolbar
+					v-model:view="view"
+					v-model:status-filter="statusFilter"
+					v-model:search-query="searchQuery"
+					:priority-filters="priorityFilters"
+					:has-active-filters="hasActiveFilters"
+					@toggle-priority="togglePriorityFilter"
+					@clear-filters="clearFilters"
+				/>
 
 				<TodoList
-					v-if="filter === 'all' || filter === 'active' || filter === 'completed'"
+					v-if="view === 'tasks'"
 					:todos="filteredTodos"
 					:total-count="totalCount"
 					:remaining-count="remainingCount"
@@ -64,7 +73,7 @@ const { isDark, toggleTheme } = useTheme()
 					@clear-completed="clearCompleted"
 				/>
 				<TodoRemovedList
-					v-else-if="filter === 'removed'"
+					v-else-if="view === 'removed'"
 					:todos="removedTodos"
 					@restore="restoreTodo"
 					@delete="deleteTodoPermanently"

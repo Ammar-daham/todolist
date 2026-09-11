@@ -21,8 +21,13 @@ function loadTodos() {
 
 export function useTodos() {
 	const todos = ref(loadTodos())
-	const filter = ref('all')
-	const priorityFilter = ref('all')
+
+	// Which collection is on screen: the task list, the bin, or the activity log.
+	const view = ref('tasks')
+	// Filters applied within the current view.
+	const statusFilter = ref('all')
+	// Empty means "every priority" — there is no separate "All" button.
+	const priorityFilters = ref([])
 	const searchQuery = ref('')
 
 	watch(
@@ -88,10 +93,26 @@ export function useTodos() {
 		})
 	}
 
+	function togglePriorityFilter(key) {
+		const current = priorityFilters.value
+		priorityFilters.value = current.includes(key) ? current.filter((p) => p !== key) : [...current, key]
+	}
+
+	function clearFilters() {
+		statusFilter.value = 'all'
+		priorityFilters.value = []
+		searchQuery.value = ''
+	}
+
+	const hasActiveFilters = computed(
+		() => statusFilter.value !== 'all' || priorityFilters.value.length > 0 || searchQuery.value.trim() !== ''
+	)
+
 	const visibleTodos = computed(() => {
 		const query = searchQuery.value.trim().toLowerCase()
+		const priorities = priorityFilters.value
 		return todos.value.filter((t) => {
-			const matchesPriority = priorityFilter.value === 'all' || (t.priority || 'medium') === priorityFilter.value
+			const matchesPriority = !priorities.length || priorities.includes(t.priority || 'medium')
 			const matchesSearch = !query || t.text.toLowerCase().includes(query)
 			return matchesPriority && matchesSearch
 		})
@@ -103,8 +124,8 @@ export function useTodos() {
 
 	const filteredTodos = computed(() => {
 		let list = activeTodos.value
-		if (filter.value === 'active') list = list.filter((t) => !t.done)
-		if (filter.value === 'completed') list = list.filter((t) => t.done)
+		if (statusFilter.value === 'active') list = list.filter((t) => !t.done)
+		if (statusFilter.value === 'completed') list = list.filter((t) => t.done)
 		return [...list].sort(
 			(a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium')
 		)
@@ -123,9 +144,13 @@ export function useTodos() {
 	)
 
 	return {
-		filter,
-		priorityFilter,
+		view,
+		statusFilter,
+		priorityFilters,
 		searchQuery,
+		hasActiveFilters,
+		togglePriorityFilter,
+		clearFilters,
 		filteredTodos,
 		removedTodos,
 		allTodos,
