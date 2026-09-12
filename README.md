@@ -4,6 +4,7 @@ A single-page todo app built with Vue 3 and Vite, styled with Bootstrap 5. All d
 
 ## Features
 
+- **Lists** — organize tasks into separate named lists; switch, rename, or delete a list from the title dropdown. Every other view (Tasks, Removed, History) is scoped to whichever list is active
 - **Tasks** — add, edit (double-click the text or use the pencil icon), toggle done, and delete
 - **Priority levels** — High / Medium / Low, shown as a colored badge and filterable
 - **Due dates** — optional per task, with color-coded overdue/upcoming indicators
@@ -37,13 +38,13 @@ npm run dev
 ```
 src/
   components/       Vue SFCs (TodoApp is the top-level orchestrator)
-  composables/       useTodos (task state/persistence), useTheme (dark mode)
+  composables/       useTodos (task state/persistence), useLists (lists), useTheme (dark mode)
   constants/         Priority definitions
   utils/             Relative-time formatting and history grouping helpers
   style.css          Global styles and light/dark CSS variables
 ```
 
-State lives in `useTodos` (src/composables/useTodos.js) and is persisted to `localStorage` on every change.
+State lives in `useTodos` (src/composables/useTodos.js) and `useLists` (src/composables/useLists.js), both persisted to `localStorage` on every change. Each task carries a `listId`; `useTodos` takes the active list's id and scopes all of its views to it.
 
 ## Tech stack
 

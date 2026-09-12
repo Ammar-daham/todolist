@@ -5,6 +5,7 @@ import { STATUSES, DEFAULT_STATUS } from '../constants/status'
 import { VIEWS, DEFAULT_VIEW } from '../constants/view'
 import { DUE_FILTERS } from '../constants/due'
 import { getDueStatus } from '../utils/time'
+import { DEFAULT_LIST_ID } from './useLists'
 
 const VALID_VIEWS = VIEWS.map((v) => v.key)
 const VALID_STATUSES = STATUSES.map((s) => s.key)
@@ -37,6 +38,9 @@ function loadTodos() {
 			dueDate: null,
 			dueTime: null,
 			...todo,
+			// Todos saved before lists existed have no listId — fold them into
+			// the default list so nothing already on the board disappears.
+			listId: todo.listId ?? DEFAULT_LIST_ID,
 			createdAt: todo.createdAt ?? Date.now(),
 		}))
 	} catch {
@@ -74,7 +78,7 @@ function loadFilterState() {
 	}
 }
 
-export function useTodos() {
+export function useTodos(activeListId) {
 	const todos = ref(loadTodos())
 
 	const savedFilters = loadFilterState()
@@ -143,10 +147,18 @@ export function useTodos() {
 			priority,
 			dueDate,
 			dueTime: dueDate ? dueTime : null,
+			listId: activeListId.value,
 			createdAt: Date.now(),
 			completedAt: null,
 			removedAt: null,
 		})
+	}
+
+	// Called when a list is deleted — its tasks have nowhere left to live, so
+	// they're dropped for good rather than orphaned under a list that no
+	// longer exists.
+	function deleteTodosForList(listId) {
+		todos.value = todos.value.filter((todo) => todo.listId !== listId)
 	}
 
 	function editTodo(id, text) {
@@ -221,11 +233,15 @@ export function useTodos() {
 			searchQuery.value.trim() !== ''
 	)
 
+	// The active list narrows every view (Tasks, Removed, History) exactly
+	// like the priority/due/search filters already do below.
+	const todosInActiveList = computed(() => todos.value.filter((t) => t.listId === activeListId.value))
+
 	const visibleTodos = computed(() => {
 		const query = searchQuery.value.trim().toLowerCase()
 		const priorities = priorityFilters.value
 		const dues = dueFilters.value
-		return todos.value.filter((t) => {
+		return todosInActiveList.value.filter((t) => {
 			const matchesPriority = !priorities.length || priorities.includes(t.priority || 'medium')
 			const matchesDue = !dues.length || dues.includes(getDueStatus(t.dueDate, t.done))
 			const matchesSearch = !query || t.text.toLowerCase().includes(query)
@@ -233,10 +249,11 @@ export function useTodos() {
 		})
 	})
 
-	const hasAnyTodos = computed(() => todos.value.some((t) => !t.removedAt))
+	const hasAnyTodos = computed(() => todosInActiveList.value.some((t) => !t.removedAt))
 
-	// Unfiltered by search/priority/due chips — the due-alert scheduler must
-	// check every active task, not just whatever the toolbar currently shows.
+	// Unfiltered by search/priority/due chips, and by the active list too — the
+	// due-alert scheduler must check every active task across every list, not
+	// just whatever the toolbar currently shows.
 	const alertableTodos = computed(() => todos.value.filter((t) => !t.removedAt))
 
 	const activeTodos = computed(() => visibleTodos.value.filter((t) => !t.removedAt))
@@ -261,6 +278,13 @@ export function useTodos() {
 			selectMode.value = false
 			selectedIds.value = []
 		}
+	})
+
+	// Switching lists changes which tasks are even on screen, so a selection
+	// made in the previous list can't carry over meaningfully.
+	watch(activeListId, () => {
+		selectMode.value = false
+		selectedIds.value = []
 	})
 
 	function toggleSelectMode() {
@@ -356,6 +380,7 @@ export function useTodos() {
 		removeTodo,
 		restoreTodo,
 		deleteTodoPermanently,
+		deleteTodosForList,
 		clearCompleted,
 		totalCount,
 		remainingCount,

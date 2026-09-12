@@ -1,5 +1,6 @@
 <script setup>
 import { useTodos } from '../composables/useTodos'
+import { useLists } from '../composables/useLists'
 import { useTheme } from '../composables/useTheme'
 import { useCustomTheme } from '../composables/useCustomTheme'
 import { useDueAlerts } from '../composables/useDueAlerts'
@@ -10,6 +11,8 @@ import TodoToolbar from './TodoToolbar.vue'
 import TodoList from './TodoList.vue'
 import TodoRemovedList from './TodoRemovedList.vue'
 import TodoHistory from './TodoHistory.vue'
+
+const { lists, activeListId, addList, renameList, selectList, removeList } = useLists()
 
 const {
 	view,
@@ -49,7 +52,13 @@ const {
 	totalCount,
 	remainingCount,
 	progress,
-} = useTodos()
+	deleteTodosForList,
+} = useTodos(activeListId)
+
+function handleRemoveList(id) {
+	deleteTodosForList(id)
+	removeList(id)
+}
 
 const { isDark, toggleTheme } = useTheme()
 const { themeKey, presets, setTheme } = useCustomTheme()
@@ -75,9 +84,15 @@ const {
 					:theme-key="themeKey"
 					:due-alerts-enabled="dueAlertsEnabled"
 					:due-alerts-permission="dueAlertsPermission"
+					:lists="lists"
+					:active-list-id="activeListId"
 					@toggle-theme="toggleTheme"
 					@select-theme="setTheme"
 					@toggle-due-alerts="toggleDueAlerts"
+					@select-list="selectList"
+					@add-list="addList"
+					@rename-list="renameList"
+					@remove-list="handleRemoveList"
 				/>
 
 				<div v-if="saveError" class="save-error d-flex align-items-start gap-2 mb-3" role="alert">

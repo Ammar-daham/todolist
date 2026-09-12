@@ -2,6 +2,7 @@
 import ThemeToggle from './ThemeToggle.vue'
 import ThemePicker from './ThemePicker.vue'
 import DueAlertsToggle from './DueAlertsToggle.vue'
+import TodoListSwitcher from './TodoListSwitcher.vue'
 
 defineProps({
 	remainingCount: { type: Number, required: true },
@@ -12,8 +13,18 @@ defineProps({
 	themeKey: { type: String, required: true },
 	dueAlertsEnabled: { type: Boolean, required: true },
 	dueAlertsPermission: { type: String, required: true },
+	lists: { type: Array, required: true },
+	activeListId: { type: String, required: true },
 })
-defineEmits(['toggle-theme', 'select-theme', 'toggle-due-alerts'])
+defineEmits([
+	'toggle-theme',
+	'select-theme',
+	'toggle-due-alerts',
+	'select-list',
+	'add-list',
+	'rename-list',
+	'remove-list',
+])
 </script>
 
 <template>
@@ -23,7 +34,15 @@ defineEmits(['toggle-theme', 'select-theme', 'toggle-due-alerts'])
 				<i class="bi bi-check2-square"></i>
 			</div>
 			<div class="header-info flex-grow-1">
-				<h1 class="header-title mb-0">My Tasks</h1>
+				<TodoListSwitcher
+					class="header-title"
+					:lists="lists"
+					:active-list-id="activeListId"
+					@select="$emit('select-list', $event)"
+					@add="$emit('add-list', $event)"
+					@rename="(id, name) => $emit('rename-list', id, name)"
+					@remove="$emit('remove-list', $event)"
+				/>
 				<p class="header-subtitle mb-0 text-truncate">
 					<template v-if="totalCount">
 						<strong class="text-body-emphasis">{{ remainingCount }}</strong> of {{ totalCount }} left &middot; {{ progress }}%
