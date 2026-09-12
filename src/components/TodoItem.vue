@@ -5,8 +5,10 @@ import { formatRelativeTime, formatDueDate, getDueStatus } from '../utils/time'
 
 const props = defineProps({
 	todo: { type: Object, required: true },
+	selectMode: { type: Boolean, default: false },
+	selected: { type: Boolean, default: false },
 })
-const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'set-priority', 'remove'])
+const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'set-priority', 'remove', 'toggle-select'])
 
 const isEditing = ref(false)
 const draftText = ref('')
@@ -64,8 +66,14 @@ function clearDue() {
 		:class="{ 'todo-item-done': todo.done }"
 		:style="{ borderInlineStartColor: PRIORITIES[todo.priority || 'medium'].color }"
 	>
-		<label class="todo-check flex-shrink-0" :class="{ checked: todo.done }">
+		<label v-if="!selectMode" class="todo-check flex-shrink-0" :class="{ checked: todo.done }">
 			<input type="checkbox" :checked="todo.done" @change="$emit('toggle', todo.id)" />
+			<span class="todo-check-box">
+				<i class="bi bi-check-lg"></i>
+			</span>
+		</label>
+		<label v-else class="todo-check flex-shrink-0" :class="{ checked: selected }">
+			<input type="checkbox" :checked="selected" @change="$emit('toggle-select', todo.id)" />
 			<span class="todo-check-box">
 				<i class="bi bi-check-lg"></i>
 			</span>
@@ -82,7 +90,7 @@ function clearDue() {
 				@blur="saveEdit"
 			/>
 			<template v-else>
-				<span class="todo-text" @dblclick="startEdit">{{ todo.text }}</span>
+				<span class="todo-text" @dblclick="!selectMode && startEdit()">{{ todo.text }}</span>
 				<div class="todo-meta small text-muted">
 					<span>Created {{ formatRelativeTime(todo.createdAt) }}</span>
 					<span v-if="todo.completedAt"> · Completed {{ formatRelativeTime(todo.completedAt) }}</span>
@@ -113,7 +121,7 @@ function clearDue() {
 				</div>
 			</template>
 		</div>
-		<template v-if="!isEditing">
+		<template v-if="!isEditing && !selectMode">
 			<div class="dropdown flex-shrink-0">
 				<button
 					type="button"

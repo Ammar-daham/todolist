@@ -26,6 +26,15 @@ const {
 	allTodos,
 	hasAnyTodos,
 	saveError,
+	selectMode,
+	selectedIds,
+	toggleSelectMode,
+	toggleSelected,
+	selectAllVisible,
+	clearSelection,
+	bulkComplete,
+	bulkSetPriority,
+	bulkDelete,
 	addTodo,
 	editTodo,
 	setDueDate,
@@ -79,12 +88,21 @@ const { isDark, toggleTheme } = useTheme()
 					:total-count="totalCount"
 					:remaining-count="remainingCount"
 					:has-any-todos="hasAnyTodos"
+					:select-mode="selectMode"
+					:selected-ids="selectedIds"
 					@toggle="toggleTodo"
 					@edit="editTodo"
 					@set-due-date="setDueDate"
 					@set-priority="setPriority"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
+					@toggle-select-mode="toggleSelectMode"
+					@toggle-select="toggleSelected"
+					@select-all="selectAllVisible"
+					@clear-selection="clearSelection"
+					@bulk-complete="bulkComplete"
+					@bulk-set-priority="bulkSetPriority"
+					@bulk-delete="bulkDelete"
 				/>
 				<TodoRemovedList
 					v-else-if="view === 'removed'"

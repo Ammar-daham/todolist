@@ -241,6 +241,67 @@ export function useTodos() {
 		return [...list].sort(sorter)
 	})
 
+	// Bulk selection — Tasks view only. Not persisted: reopening the app
+	// already in select mode with a stale selection would be confusing.
+	const selectMode = ref(false)
+	const selectedIds = ref([])
+
+	// Leaving Tasks (e.g. to check Removed) invalidates any in-progress
+	// selection, so don't let it linger for when the user comes back.
+	watch(view, (value) => {
+		if (value !== DEFAULT_VIEW) {
+			selectMode.value = false
+			selectedIds.value = []
+		}
+	})
+
+	function toggleSelectMode() {
+		selectMode.value = !selectMode.value
+		selectedIds.value = []
+	}
+
+	function toggleSelected(id) {
+		const current = selectedIds.value
+		selectedIds.value = current.includes(id) ? current.filter((i) => i !== id) : [...current, id]
+	}
+
+	function selectAllVisible() {
+		selectedIds.value = filteredTodos.value.map((t) => t.id)
+	}
+
+	function clearSelection() {
+		selectedIds.value = []
+	}
+
+	function bulkComplete() {
+		const now = Date.now()
+		const ids = new Set(selectedIds.value)
+		todos.value.forEach((todo) => {
+			if (ids.has(todo.id) && !todo.done) {
+				todo.done = true
+				todo.completedAt = now
+			}
+		})
+		selectedIds.value = []
+	}
+
+	function bulkSetPriority(priority) {
+		const ids = new Set(selectedIds.value)
+		todos.value.forEach((todo) => {
+			if (ids.has(todo.id)) todo.priority = priority
+		})
+		selectedIds.value = []
+	}
+
+	function bulkDelete() {
+		const now = Date.now()
+		const ids = new Set(selectedIds.value)
+		todos.value.forEach((todo) => {
+			if (ids.has(todo.id)) todo.removedAt = now
+		})
+		selectedIds.value = []
+	}
+
 	const removedTodos = computed(() =>
 		[...visibleTodos.value].filter((t) => t.removedAt).sort((a, b) => b.removedAt - a.removedAt)
 	)
@@ -269,6 +330,15 @@ export function useTodos() {
 		allTodos,
 		hasAnyTodos,
 		saveError,
+		selectMode,
+		selectedIds,
+		toggleSelectMode,
+		toggleSelected,
+		selectAllVisible,
+		clearSelection,
+		bulkComplete,
+		bulkSetPriority,
+		bulkDelete,
 		addTodo,
 		editTodo,
 		setDueDate,
