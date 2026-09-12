@@ -35,6 +35,7 @@ function loadTodos() {
 			completedAt: null,
 			removedAt: null,
 			dueDate: null,
+			dueTime: null,
 			...todo,
 			createdAt: todo.createdAt ?? Date.now(),
 		}))
@@ -132,7 +133,7 @@ export function useTodos() {
 		{ deep: true }
 	)
 
-	function addTodo(text, priority, dueDate = null) {
+	function addTodo(text, priority, dueDate = null, dueTime = null) {
 		const trimmed = text.trim()
 		if (!trimmed) return
 		todos.value.push({
@@ -141,6 +142,7 @@ export function useTodos() {
 			done: false,
 			priority,
 			dueDate,
+			dueTime: dueDate ? dueTime : null,
 			createdAt: Date.now(),
 			completedAt: null,
 			removedAt: null,
@@ -154,9 +156,11 @@ export function useTodos() {
 		if (todo) todo.text = trimmed
 	}
 
-	function setDueDate(id, dueDate) {
+	function setDueDate(id, dueDate, dueTime = null) {
 		const todo = todos.value.find((t) => t.id === id)
-		if (todo) todo.dueDate = dueDate || null
+		if (!todo) return
+		todo.dueDate = dueDate || null
+		todo.dueTime = todo.dueDate ? dueTime || null : null
 	}
 
 	function setPriority(id, priority) {
@@ -230,6 +234,10 @@ export function useTodos() {
 	})
 
 	const hasAnyTodos = computed(() => todos.value.some((t) => !t.removedAt))
+
+	// Unfiltered by search/priority/due chips — the due-alert scheduler must
+	// check every active task, not just whatever the toolbar currently shows.
+	const alertableTodos = computed(() => todos.value.filter((t) => !t.removedAt))
 
 	const activeTodos = computed(() => visibleTodos.value.filter((t) => !t.removedAt))
 
@@ -329,6 +337,7 @@ export function useTodos() {
 		removedTodos,
 		allTodos,
 		hasAnyTodos,
+		alertableTodos,
 		saveError,
 		selectMode,
 		selectedIds,

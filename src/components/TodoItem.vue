@@ -35,11 +35,14 @@ function cancelEdit() {
 
 const isEditingDue = ref(false)
 const draftDue = ref('')
+const draftDueTime = ref('')
 const dueInput = ref(null)
+const dueTimeInput = ref(null)
 const dueStatus = computed(() => getDueStatus(props.todo.dueDate, props.todo.done))
 
 function startEditDue() {
 	draftDue.value = props.todo.dueDate || ''
+	draftDueTime.value = props.todo.dueTime || ''
 	isEditingDue.value = true
 	nextTick(() => dueInput.value?.focus())
 }
@@ -47,7 +50,7 @@ function startEditDue() {
 function saveEditDue() {
 	if (!isEditingDue.value) return
 	isEditingDue.value = false
-	emit('set-due-date', props.todo.id, draftDue.value || null)
+	emit('set-due-date', props.todo.id, draftDue.value || null, draftDue.value ? draftDueTime.value || null : null)
 }
 
 function cancelEditDue() {
@@ -56,7 +59,14 @@ function cancelEditDue() {
 
 function clearDue() {
 	isEditingDue.value = false
-	emit('set-due-date', props.todo.id, null)
+	emit('set-due-date', props.todo.id, null, null)
+}
+
+// Tabbing/clicking from the date field into the new time field shouldn't
+// commit early — only save once focus actually leaves both fields.
+function handleDateBlur(event) {
+	if (event.relatedTarget && event.relatedTarget === dueTimeInput.value) return
+	saveEditDue()
 }
 </script>
 
@@ -103,8 +113,8 @@ function clearDue() {
 						:class="todo.dueDate ? `due-${dueStatus}` : 'due-empty'"
 						@click="startEditDue"
 					>
-						<i class="bi bi-calendar-event"></i>
-						{{ todo.dueDate ? formatDueDate(todo.dueDate) : 'Add due date' }}
+						<i class="bi" :class="todo.dueTime ? 'bi-alarm' : 'bi-calendar-event'"></i>
+						{{ todo.dueDate ? formatDueDate(todo.dueDate, todo.dueTime) : 'Add due date' }}
 					</button>
 				</div>
 				<div v-else class="due-edit d-flex align-items-center gap-2">
@@ -113,6 +123,16 @@ function clearDue() {
 						v-model="draftDue"
 						type="date"
 						class="form-control form-control-sm due-edit-input"
+						@keyup.enter="saveEditDue"
+						@keyup.esc="cancelEditDue"
+						@blur="handleDateBlur"
+					/>
+					<input
+						v-if="draftDue"
+						ref="dueTimeInput"
+						v-model="draftDueTime"
+						type="time"
+						class="form-control form-control-sm due-edit-time-input"
 						@keyup.enter="saveEditDue"
 						@keyup.esc="cancelEditDue"
 						@blur="saveEditDue"
@@ -281,6 +301,16 @@ function clearDue() {
 	color: inherit;
 }
 .due-edit-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+.due-edit-time-input {
+	max-width: 110px;
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+}
+.due-edit-time-input:focus {
 	box-shadow: none;
 	border-color: var(--accent);
 }

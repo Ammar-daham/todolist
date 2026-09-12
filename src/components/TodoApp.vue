@@ -2,8 +2,11 @@
 import { useTodos } from '../composables/useTodos'
 import { useTheme } from '../composables/useTheme'
 import { useCustomTheme } from '../composables/useCustomTheme'
+import { useDueAlerts } from '../composables/useDueAlerts'
 import ThemeToggle from './ThemeToggle.vue'
 import ThemePicker from './ThemePicker.vue'
+import DueAlertsToggle from './DueAlertsToggle.vue'
+import DueAlertToast from './DueAlertToast.vue'
 import TodoHeader from './TodoHeader.vue'
 import TodoInput from './TodoInput.vue'
 import TodoProgress from './TodoProgress.vue'
@@ -27,6 +30,7 @@ const {
 	removedTodos,
 	allTodos,
 	hasAnyTodos,
+	alertableTodos,
 	saveError,
 	selectMode,
 	selectedIds,
@@ -53,6 +57,13 @@ const {
 
 const { isDark, toggleTheme } = useTheme()
 const { themeKey, presets, setTheme } = useCustomTheme()
+const {
+	enabled: dueAlertsEnabled,
+	permission: dueAlertsPermission,
+	toast: dueAlertToast,
+	toggle: toggleDueAlerts,
+	dismissToast: dismissDueAlertToast,
+} = useDueAlerts(alertableTodos)
 </script>
 
 <template>
@@ -61,6 +72,7 @@ const { themeKey, presets, setTheme } = useCustomTheme()
 			<div class="card-body p-3 p-sm-4 position-relative">
 				<ThemeToggle :is-dark="isDark" @toggle="toggleTheme" />
 				<ThemePicker :presets="presets" :active-key="themeKey" @select="setTheme" />
+				<DueAlertsToggle :enabled="dueAlertsEnabled" :permission="dueAlertsPermission" @toggle="toggleDueAlerts" />
 
 				<TodoHeader />
 
@@ -117,6 +129,8 @@ const { themeKey, presets, setTheme } = useCustomTheme()
 				<TodoHistory v-else :todos="allTodos" />
 			</div>
 		</div>
+
+		<DueAlertToast :toast="dueAlertToast" @dismiss="dismissDueAlertToast" />
 	</div>
 </template>
 

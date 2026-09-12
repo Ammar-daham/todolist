@@ -46,7 +46,7 @@ function handleToggleSelectAll() {
 			:selected="selectedIds.includes(todo.id)"
 			@toggle="$emit('toggle', $event)"
 			@edit="(id, text) => $emit('edit', id, text)"
-			@set-due-date="(id, date) => $emit('set-due-date', id, date)"
+			@set-due-date="(id, date, time) => $emit('set-due-date', id, date, time)"
 			@set-priority="(id, priority) => $emit('set-priority', id, priority)"
 			@remove="$emit('remove', $event)"
 			@toggle-select="$emit('toggle-select', $event)"

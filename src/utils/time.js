@@ -33,20 +33,41 @@ function daysUntilDue(dateStr) {
 	return Math.round(diffMs / 86400000)
 }
 
-export function formatDueDate(dateStr) {
+export function formatDueTime(timeStr) {
+	if (!timeStr) return ''
+	const [h, m] = timeStr.split(':').map(Number)
+	const d = new Date()
+	d.setHours(h, m, 0, 0)
+	return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+}
+
+export function formatDueDate(dateStr, timeStr) {
 	if (!dateStr) return ''
 
 	const diffDays = daysUntilDue(dateStr)
-	if (diffDays === 0) return 'Today'
-	if (diffDays === 1) return 'Tomorrow'
-	if (diffDays === -1) return 'Yesterday'
+	let label
+	if (diffDays === 0) label = 'Today'
+	else if (diffDays === 1) label = 'Tomorrow'
+	else if (diffDays === -1) label = 'Yesterday'
+	else {
+		const date = parseDueDate(dateStr)
+		label = date.toLocaleDateString(undefined, {
+			month: 'short',
+			day: 'numeric',
+			year: date.getFullYear() === startOfToday().getFullYear() ? undefined : 'numeric',
+		})
+	}
+	return timeStr ? `${label}, ${formatDueTime(timeStr)}` : label
+}
 
-	const date = parseDueDate(dateStr)
-	return date.toLocaleDateString(undefined, {
-		month: 'short',
-		day: 'numeric',
-		year: date.getFullYear() === startOfToday().getFullYear() ? undefined : 'numeric',
-	})
+// The exact due moment, for the alert scheduler. Returns null when there's no
+// time component — day-only due dates have no specific instant to alarm at,
+// so they keep the existing overdue/upcoming badge behavior but don't page.
+export function parseDueDateTime(dateStr, timeStr) {
+	if (!dateStr || !timeStr) return null
+	const [y, m, d] = dateStr.split('-').map(Number)
+	const [h, min] = timeStr.split(':').map(Number)
+	return new Date(y, m - 1, d, h, min, 0, 0).getTime()
 }
 
 export function getDueStatus(dateStr, done) {
