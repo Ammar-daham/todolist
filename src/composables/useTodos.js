@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { PRIORITY_ORDER } from '../constants/priorities'
 import { DEFAULT_SORT } from '../constants/sort'
+import { getDueStatus } from '../utils/time'
 
 const SORTERS = {
 	priority: (a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium'),
@@ -42,6 +43,9 @@ export function useTodos() {
 	const statusFilter = ref('all')
 	// Empty means "every priority" — there is no separate "All" button.
 	const priorityFilters = ref([])
+	// Same convention: empty means every due-date bucket. Keys match getDueStatus
+	// ('overdue' / 'upcoming') so a chip means exactly what its item badge shows.
+	const dueFilters = ref([])
 	const searchQuery = ref('')
 	// Ordering, independent of filtering — changing it never hides a task.
 	const sortBy = ref(DEFAULT_SORT)
@@ -131,23 +135,35 @@ export function useTodos() {
 		priorityFilters.value = current.includes(key) ? current.filter((p) => p !== key) : [...current, key]
 	}
 
+	function toggleDueFilter(key) {
+		const current = dueFilters.value
+		dueFilters.value = current.includes(key) ? current.filter((d) => d !== key) : [...current, key]
+	}
+
 	function clearFilters() {
 		statusFilter.value = 'all'
 		priorityFilters.value = []
+		dueFilters.value = []
 		searchQuery.value = ''
 	}
 
 	const hasActiveFilters = computed(
-		() => statusFilter.value !== 'all' || priorityFilters.value.length > 0 || searchQuery.value.trim() !== ''
+		() =>
+			statusFilter.value !== 'all' ||
+			priorityFilters.value.length > 0 ||
+			dueFilters.value.length > 0 ||
+			searchQuery.value.trim() !== ''
 	)
 
 	const visibleTodos = computed(() => {
 		const query = searchQuery.value.trim().toLowerCase()
 		const priorities = priorityFilters.value
+		const dues = dueFilters.value
 		return todos.value.filter((t) => {
 			const matchesPriority = !priorities.length || priorities.includes(t.priority || 'medium')
+			const matchesDue = !dues.length || dues.includes(getDueStatus(t.dueDate, t.done))
 			const matchesSearch = !query || t.text.toLowerCase().includes(query)
-			return matchesPriority && matchesSearch
+			return matchesPriority && matchesDue && matchesSearch
 		})
 	})
 
@@ -179,10 +195,12 @@ export function useTodos() {
 		view,
 		statusFilter,
 		priorityFilters,
+		dueFilters,
 		searchQuery,
 		sortBy,
 		hasActiveFilters,
 		togglePriorityFilter,
+		toggleDueFilter,
 		clearFilters,
 		filteredTodos,
 		removedTodos,

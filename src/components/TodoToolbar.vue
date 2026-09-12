@@ -7,6 +7,7 @@ defineProps({
 	view: { type: String, required: true },
 	statusFilter: { type: String, required: true },
 	priorityFilters: { type: Array, required: true },
+	dueFilters: { type: Array, required: true },
 	searchQuery: { type: String, required: true },
 	sortBy: { type: String, required: true },
 	hasActiveFilters: { type: Boolean, required: true },
@@ -17,6 +18,7 @@ defineEmits([
 	'update:searchQuery',
 	'update:sortBy',
 	'toggle-priority',
+	'toggle-due',
 	'clear-filters',
 ])
 
@@ -24,6 +26,13 @@ const STATUSES = [
 	{ key: 'all', label: 'All' },
 	{ key: 'active', label: 'Active' },
 	{ key: 'completed', label: 'Completed' },
+]
+
+// Keys match utils/time.js's getDueStatus, so a chip means exactly what the
+// matching per-item due badge already shows.
+const DUE_FILTERS = [
+	{ key: 'overdue', label: 'Overdue', badge: 'danger', icon: 'bi-exclamation-circle' },
+	{ key: 'upcoming', label: 'Upcoming', badge: 'warning', icon: 'bi-hourglass-split' },
 ]
 
 const VIEWS = [
@@ -137,6 +146,22 @@ const VIEWS = [
 						:style="{ background: priorityFilters.includes(key) ? '#fff' : PRIORITIES[key].color }"
 					></span>
 					{{ PRIORITIES[key].short }}
+				</button>
+			</div>
+
+			<!-- No "All" chip here either — same convention as priority. -->
+			<div class="d-flex flex-wrap gap-2" role="group" aria-label="Due date filter">
+				<button
+					v-for="d in DUE_FILTERS"
+					:key="d.key"
+					type="button"
+					class="btn chip d-flex align-items-center gap-1"
+					:class="[`chip-${d.badge}`, { 'chip-active': dueFilters.includes(d.key) }]"
+					:aria-pressed="dueFilters.includes(d.key)"
+					@click="$emit('toggle-due', d.key)"
+				>
+					<i class="bi" :class="d.icon"></i>
+					{{ d.label }}
 				</button>
 			</div>
 

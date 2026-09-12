@@ -14,10 +14,12 @@ const {
 	view,
 	statusFilter,
 	priorityFilters,
+	dueFilters,
 	searchQuery,
 	sortBy,
 	hasActiveFilters,
 	togglePriorityFilter,
+	toggleDueFilter,
 	clearFilters,
 	filteredTodos,
 	removedTodos,
@@ -64,8 +66,10 @@ const { isDark, toggleTheme } = useTheme()
 					v-model:search-query="searchQuery"
 					v-model:sort-by="sortBy"
 					:priority-filters="priorityFilters"
+					:due-filters="dueFilters"
 					:has-active-filters="hasActiveFilters"
 					@toggle-priority="togglePriorityFilter"
+					@toggle-due="toggleDueFilter"
 					@clear-filters="clearFilters"
 				/>
 
