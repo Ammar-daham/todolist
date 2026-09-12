@@ -1,6 +1,9 @@
 <script setup>
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
 import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/sort'
+import { STATUSES } from '../constants/status'
+import { VIEWS, DEFAULT_VIEW } from '../constants/view'
+import { DUE_FILTERS } from '../constants/due'
 import TodoSearch from './TodoSearch.vue'
 
 defineProps({
@@ -22,24 +25,6 @@ defineEmits([
 	'clear-filters',
 ])
 
-const STATUSES = [
-	{ key: 'all', label: 'All' },
-	{ key: 'active', label: 'Active' },
-	{ key: 'completed', label: 'Completed' },
-]
-
-// Keys match utils/time.js's getDueStatus, so a chip means exactly what the
-// matching per-item due badge already shows.
-const DUE_FILTERS = [
-	{ key: 'overdue', label: 'Overdue', badge: 'danger', icon: 'bi-exclamation-circle' },
-	{ key: 'upcoming', label: 'Upcoming', badge: 'warning', icon: 'bi-hourglass-split' },
-]
-
-const VIEWS = [
-	{ key: 'tasks', label: 'Tasks', icon: 'bi-list-check' },
-	{ key: 'removed', label: 'Removed', icon: 'bi-trash3' },
-	{ key: 'history', label: 'History', icon: 'bi-clock-history' },
-]
 </script>
 
 <template>
@@ -123,7 +108,7 @@ const VIEWS = [
 				</button>
 			</div>
 
-			<button v-else type="button" class="btn btn-back" @click="$emit('update:view', 'tasks')">
+			<button v-else type="button" class="btn btn-back" @click="$emit('update:view', DEFAULT_VIEW)">
 				<i class="bi bi-arrow-left"></i>
 				<span>{{ VIEWS.find((v) => v.key === view).label }}</span>
 			</button>

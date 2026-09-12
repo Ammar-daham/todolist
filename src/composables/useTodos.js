@@ -1,7 +1,15 @@
 import { ref, computed, watch } from 'vue'
 import { PRIORITY_ORDER } from '../constants/priorities'
-import { DEFAULT_SORT } from '../constants/sort'
+import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/sort'
+import { STATUSES, DEFAULT_STATUS } from '../constants/status'
+import { VIEWS, DEFAULT_VIEW } from '../constants/view'
+import { DUE_FILTERS } from '../constants/due'
 import { getDueStatus } from '../utils/time'
+
+const VALID_VIEWS = VIEWS.map((v) => v.key)
+const VALID_STATUSES = STATUSES.map((s) => s.key)
+const VALID_DUE_FILTERS = DUE_FILTERS.map((d) => d.key)
+const VALID_SORTS = SORT_OPTIONS.map((s) => s.key)
 
 const SORTERS = {
 	priority: (a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium'),
@@ -17,6 +25,7 @@ const SORTERS = {
 }
 
 const STORAGE_KEY = 'todo-app.todos'
+const FILTERS_STORAGE_KEY = 'todo-app.filters'
 
 function loadTodos() {
 	try {
@@ -34,21 +43,74 @@ function loadTodos() {
 	}
 }
 
+// Search is intentionally excluded — a stale search term reappearing on
+// reopen tends to confuse more than it helps, unlike the toolbar's toggles.
+function loadFilterState() {
+	const defaults = {
+		view: DEFAULT_VIEW,
+		statusFilter: DEFAULT_STATUS,
+		priorityFilters: [],
+		dueFilters: [],
+		sortBy: DEFAULT_SORT,
+	}
+	try {
+		const raw = localStorage.getItem(FILTERS_STORAGE_KEY)
+		if (!raw) return defaults
+		const parsed = JSON.parse(raw)
+		return {
+			view: VALID_VIEWS.includes(parsed.view) ? parsed.view : defaults.view,
+			statusFilter: VALID_STATUSES.includes(parsed.statusFilter) ? parsed.statusFilter : defaults.statusFilter,
+			priorityFilters: Array.isArray(parsed.priorityFilters)
+				? parsed.priorityFilters.filter((key) => PRIORITY_ORDER.includes(key))
+				: defaults.priorityFilters,
+			dueFilters: Array.isArray(parsed.dueFilters)
+				? parsed.dueFilters.filter((key) => VALID_DUE_FILTERS.includes(key))
+				: defaults.dueFilters,
+			sortBy: VALID_SORTS.includes(parsed.sortBy) ? parsed.sortBy : defaults.sortBy,
+		}
+	} catch {
+		return defaults
+	}
+}
+
 export function useTodos() {
 	const todos = ref(loadTodos())
 
+	const savedFilters = loadFilterState()
+
 	// Which collection is on screen: the task list, the bin, or the activity log.
-	const view = ref('tasks')
+	const view = ref(savedFilters.view)
 	// Filters applied within the current view.
-	const statusFilter = ref('all')
+	const statusFilter = ref(savedFilters.statusFilter)
 	// Empty means "every priority" — there is no separate "All" button.
-	const priorityFilters = ref([])
+	const priorityFilters = ref(savedFilters.priorityFilters)
 	// Same convention: empty means every due-date bucket. Keys match getDueStatus
 	// ('overdue' / 'upcoming') so a chip means exactly what its item badge shows.
-	const dueFilters = ref([])
+	const dueFilters = ref(savedFilters.dueFilters)
+	// Not persisted — see loadFilterState.
 	const searchQuery = ref('')
 	// Ordering, independent of filtering — changing it never hides a task.
-	const sortBy = ref(DEFAULT_SORT)
+	const sortBy = ref(savedFilters.sortBy)
+
+	// Remember the toolbar's state across visits, same as todos above. A
+	// failure here is a lost preference, not lost data, so it's logged but
+	// doesn't need its own user-facing error like saveError.
+	watch([view, statusFilter, priorityFilters, dueFilters, sortBy], () => {
+		try {
+			localStorage.setItem(
+				FILTERS_STORAGE_KEY,
+				JSON.stringify({
+					view: view.value,
+					statusFilter: statusFilter.value,
+					priorityFilters: priorityFilters.value,
+					dueFilters: dueFilters.value,
+					sortBy: sortBy.value,
+				})
+			)
+		} catch (err) {
+			console.error('Failed to save filter preferences:', err)
+		}
+	})
 
 	// localStorage is our only persistence layer, so a write failure (quota
 	// exceeded, private browsing lockdown, etc.) must never pass silently —
@@ -141,7 +203,7 @@ export function useTodos() {
 	}
 
 	function clearFilters() {
-		statusFilter.value = 'all'
+		statusFilter.value = DEFAULT_STATUS
 		priorityFilters.value = []
 		dueFilters.value = []
 		searchQuery.value = ''
@@ -149,7 +211,7 @@ export function useTodos() {
 
 	const hasActiveFilters = computed(
 		() =>
-			statusFilter.value !== 'all' ||
+			statusFilter.value !== DEFAULT_STATUS ||
 			priorityFilters.value.length > 0 ||
 			dueFilters.value.length > 0 ||
 			searchQuery.value.trim() !== ''
