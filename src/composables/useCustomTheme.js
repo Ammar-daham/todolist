@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { THEME_PRESETS, DEFAULT_THEME_KEY } from '../constants/themes'
 import { getPatternLayer } from '../utils/backgroundPatterns'
+import { getImageLayer } from '../utils/backgroundImages'
 
 const STORAGE_KEY = 'todo-app.customTheme'
 
@@ -34,9 +35,18 @@ function applyPreset(preset) {
 		else root.setProperty(cssVar, preset[field])
 	}
 
-	const { image, size } = getPatternLayer(preset.pattern)
-	root.setProperty('--bg-pattern', image)
-	root.setProperty('--bg-pattern-size', size)
+	// An `image` preset is a full-bleed scene that should cover the page
+	// without tiling; a `pattern` preset is a small texture meant to repeat.
+	if (preset.image) {
+		root.setProperty('--bg-pattern', getImageLayer(preset.image).image)
+		root.setProperty('--bg-pattern-size', 'cover')
+		root.setProperty('--bg-pattern-repeat', 'no-repeat')
+	} else {
+		const { image, size } = getPatternLayer(preset.pattern)
+		root.setProperty('--bg-pattern', image)
+		root.setProperty('--bg-pattern-size', size)
+		root.setProperty('--bg-pattern-repeat', 'repeat')
+	}
 }
 
 export function useCustomTheme() {

@@ -1,6 +1,11 @@
 // Each preset overrides the page's accent + background gradient CSS variables.
 // `null` fields mean "don't override" — only the Default preset uses this, so
 // it keeps following the light/dark stylesheet rules instead of a fixed look.
+//
+// A preset has either a `pattern` (a small tiled texture layered over the
+// gradient, see backgroundPatterns.js) or an `image` (a full-bleed scene that
+// replaces the gradient as the page background, see backgroundImages.js) —
+// never both.
 export const THEME_PRESETS = [
 	{
 		key: 'default',
@@ -79,6 +84,62 @@ export const THEME_PRESETS = [
 		bgEnd: '#1e293b',
 		pattern: 'stars',
 		swatch: ['#020617', '#0f172a', '#1e293b'],
+	},
+	{
+		key: 'mountains',
+		label: 'Mountains',
+		accent: '#f97316',
+		accentStrong: '#ea580c',
+		accentSoft: 'rgba(249, 115, 22, 0.16)',
+		accentContrast: '#ffffff',
+		bgStart: '#ff9a76',
+		bgMid: '#ff6f91',
+		bgEnd: '#2a2140',
+		pattern: null,
+		image: 'mountains',
+		swatch: ['#ff9a76', '#ff6f91', '#2a2140'],
+	},
+	{
+		key: 'horizon',
+		label: 'Ocean Horizon',
+		accent: '#0ea5e9',
+		accentStrong: '#0284c7',
+		accentSoft: 'rgba(14, 165, 233, 0.16)',
+		accentContrast: '#ffffff',
+		bgStart: '#8ec5fc',
+		bgMid: '#1c5d70',
+		bgEnd: '#0f2027',
+		pattern: null,
+		image: 'horizon',
+		swatch: ['#8ec5fc', '#1c5d70', '#0f2027'],
+	},
+	{
+		key: 'aurora',
+		label: 'Aurora Sky',
+		accent: '#34d399',
+		accentStrong: '#059669',
+		accentSoft: 'rgba(52, 211, 153, 0.18)',
+		accentContrast: '#052e1a',
+		bgStart: '#020617',
+		bgMid: '#0f172a',
+		bgEnd: '#111827',
+		pattern: null,
+		image: 'aurora',
+		swatch: ['#020617', '#34d399', '#818cf8'],
+	},
+	{
+		key: 'dunes',
+		label: 'Desert Dunes',
+		accent: '#ea580c',
+		accentStrong: '#c2410c',
+		accentSoft: 'rgba(234, 88, 12, 0.16)',
+		accentContrast: '#ffffff',
+		bgStart: '#f6d365',
+		bgMid: '#fda085',
+		bgEnd: '#c96f2e',
+		pattern: null,
+		image: 'dunes',
+		swatch: ['#f6d365', '#fda085', '#c96f2e'],
 	},
 ]
 

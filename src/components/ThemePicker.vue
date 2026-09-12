@@ -1,9 +1,16 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
 	presets: { type: Array, required: true },
 	activeKey: { type: String, required: true },
 })
 defineEmits(['select'])
+
+const groups = computed(() => [
+	{ label: 'Colors', items: props.presets.filter((t) => !t.image) },
+	{ label: 'Background images', items: props.presets.filter((t) => t.image) },
+])
 </script>
 
 <template>
@@ -18,21 +25,25 @@ defineEmits(['select'])
 			<i class="bi bi-palette2"></i>
 		</button>
 		<ul class="dropdown-menu theme-picker-menu">
-			<li v-for="theme in presets" :key="theme.key">
-				<button
-					type="button"
-					class="dropdown-item d-flex align-items-center gap-2"
-					:class="{ active: theme.key === activeKey }"
-					@click="$emit('select', theme.key)"
-				>
-					<span
-						class="theme-swatch"
-						:style="{ background: `linear-gradient(135deg, ${theme.swatch[0]}, ${theme.swatch[1]}, ${theme.swatch[2]})` }"
-					></span>
-					{{ theme.label }}
-					<i v-if="theme.key === activeKey" class="bi bi-check-lg ms-auto"></i>
-				</button>
-			</li>
+			<template v-for="(group, index) in groups" :key="group.label">
+				<li v-if="index > 0"><hr class="dropdown-divider" /></li>
+				<li class="dropdown-header">{{ group.label }}</li>
+				<li v-for="theme in group.items" :key="theme.key">
+					<button
+						type="button"
+						class="dropdown-item d-flex align-items-center gap-2"
+						:class="{ active: theme.key === activeKey }"
+						@click="$emit('select', theme.key)"
+					>
+						<span
+							class="theme-swatch"
+							:style="{ background: `linear-gradient(135deg, ${theme.swatch[0]}, ${theme.swatch[1]}, ${theme.swatch[2]})` }"
+						></span>
+						{{ theme.label }}
+						<i v-if="theme.key === activeKey" class="bi bi-check-lg ms-auto"></i>
+					</button>
+				</li>
+			</template>
 		</ul>
 	</div>
 </template>
@@ -66,7 +77,23 @@ defineEmits(['select'])
 	border-color: var(--border);
 	border-radius: 12px;
 	padding: 6px;
-	min-width: 170px;
+	min-width: 190px;
+	max-height: 340px;
+	overflow-y: auto;
+}
+
+.dropdown-header {
+	font-size: 0.72rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-done);
+	padding: 6px 10px 2px;
+}
+
+.dropdown-divider {
+	border-color: var(--border);
+	margin: 6px 4px;
 }
 
 .dropdown-item {
