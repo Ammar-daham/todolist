@@ -1,5 +1,6 @@
 <script setup>
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
+import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/sort'
 import TodoSearch from './TodoSearch.vue'
 
 defineProps({
@@ -7,9 +8,17 @@ defineProps({
 	statusFilter: { type: String, required: true },
 	priorityFilters: { type: Array, required: true },
 	searchQuery: { type: String, required: true },
+	sortBy: { type: String, required: true },
 	hasActiveFilters: { type: Boolean, required: true },
 })
-defineEmits(['update:view', 'update:statusFilter', 'update:searchQuery', 'toggle-priority', 'clear-filters'])
+defineEmits([
+	'update:view',
+	'update:statusFilter',
+	'update:searchQuery',
+	'update:sortBy',
+	'toggle-priority',
+	'clear-filters',
+])
 
 const STATUSES = [
 	{ key: 'all', label: 'All' },
@@ -32,6 +41,34 @@ const VIEWS = [
 				:model-value="searchQuery"
 				@update:model-value="$emit('update:searchQuery', $event)"
 			/>
+
+			<!-- Sort only reorders the task list; Removed and History have their own fixed order. -->
+			<div v-if="view === 'tasks'" class="dropdown flex-shrink-0">
+				<button
+					type="button"
+					class="btn btn-view"
+					:class="{ 'btn-view-active': sortBy !== DEFAULT_SORT }"
+					data-bs-toggle="dropdown"
+					data-bs-display="static"
+					aria-expanded="false"
+					aria-label="Sort tasks"
+				>
+					<i class="bi bi-sort-down"></i>
+				</button>
+				<ul class="dropdown-menu dropdown-menu-end">
+					<li v-for="s in SORT_OPTIONS" :key="s.key">
+						<button
+							type="button"
+							class="dropdown-item d-flex align-items-center gap-2"
+							:class="{ active: sortBy === s.key }"
+							@click="$emit('update:sortBy', s.key)"
+						>
+							<i class="bi" :class="s.icon"></i>{{ s.label }}
+							<i v-if="sortBy === s.key" class="bi bi-check2 ms-auto"></i>
+						</button>
+					</li>
+				</ul>
+			</div>
 
 			<div class="dropdown flex-shrink-0">
 				<button

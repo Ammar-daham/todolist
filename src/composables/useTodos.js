@@ -1,5 +1,19 @@
 import { ref, computed, watch } from 'vue'
 import { PRIORITY_ORDER } from '../constants/priorities'
+import { DEFAULT_SORT } from '../constants/sort'
+
+const SORTERS = {
+	priority: (a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium'),
+	dueDate: (a, b) => {
+		if (!a.dueDate && !b.dueDate) return 0
+		if (!a.dueDate) return 1 // no due date sorts after any date
+		if (!b.dueDate) return -1
+		return a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0
+	},
+	newest: (a, b) => b.createdAt - a.createdAt,
+	oldest: (a, b) => a.createdAt - b.createdAt,
+	alphabetical: (a, b) => a.text.localeCompare(b.text),
+}
 
 const STORAGE_KEY = 'todo-app.todos'
 
@@ -29,6 +43,8 @@ export function useTodos() {
 	// Empty means "every priority" — there is no separate "All" button.
 	const priorityFilters = ref([])
 	const searchQuery = ref('')
+	// Ordering, independent of filtering — changing it never hides a task.
+	const sortBy = ref(DEFAULT_SORT)
 
 	// localStorage is our only persistence layer, so a write failure (quota
 	// exceeded, private browsing lockdown, etc.) must never pass silently —
@@ -143,9 +159,8 @@ export function useTodos() {
 		let list = activeTodos.value
 		if (statusFilter.value === 'active') list = list.filter((t) => !t.done)
 		if (statusFilter.value === 'completed') list = list.filter((t) => t.done)
-		return [...list].sort(
-			(a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium')
-		)
+		const sorter = SORTERS[sortBy.value] ?? SORTERS[DEFAULT_SORT]
+		return [...list].sort(sorter)
 	})
 
 	const removedTodos = computed(() =>
@@ -165,6 +180,7 @@ export function useTodos() {
 		statusFilter,
 		priorityFilters,
 		searchQuery,
+		sortBy,
 		hasActiveFilters,
 		togglePriorityFilter,
 		clearFilters,
