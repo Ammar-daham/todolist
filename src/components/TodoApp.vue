@@ -1,7 +1,9 @@
 <script setup>
 import { useTodos } from '../composables/useTodos'
 import { useTheme } from '../composables/useTheme'
+import { useCustomTheme } from '../composables/useCustomTheme'
 import ThemeToggle from './ThemeToggle.vue'
+import ThemePicker from './ThemePicker.vue'
 import TodoHeader from './TodoHeader.vue'
 import TodoInput from './TodoInput.vue'
 import TodoProgress from './TodoProgress.vue'
@@ -50,6 +52,7 @@ const {
 } = useTodos()
 
 const { isDark, toggleTheme } = useTheme()
+const { themeKey, presets, setTheme } = useCustomTheme()
 </script>
 
 <template>
@@ -57,6 +60,7 @@ const { isDark, toggleTheme } = useTheme()
 		<div class="todo-card card border-0 shadow-lg w-100">
 			<div class="card-body p-3 p-sm-4 position-relative">
 				<ThemeToggle :is-dark="isDark" @toggle="toggleTheme" />
+				<ThemePicker :presets="presets" :active-key="themeKey" @select="setTheme" />
 
 				<TodoHeader />
 

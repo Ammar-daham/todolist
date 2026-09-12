@@ -7,6 +7,8 @@
   --bg-start: #6a5cf5;
   --bg-mid: #7f6ff8;
   --bg-end: #a78bfa;
+  --bg-pattern: none;
+  --bg-pattern-size: auto;
 
   --surface: #ffffff;
   --surface-alt: #f8f9fc;
@@ -54,7 +56,9 @@
 
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-mid) 40%, var(--bg-end) 100%);
+  background-image: var(--bg-pattern), linear-gradient(135deg, var(--bg-start) 0%, var(--bg-mid) 40%, var(--bg-end) 100%);
+  background-repeat: repeat, no-repeat;
+  background-size: var(--bg-pattern-size), cover;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  transition: background 0.3s ease;
+  transition: background-color 0.3s ease;
 }
