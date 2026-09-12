@@ -3,13 +3,9 @@ import { useTodos } from '../composables/useTodos'
 import { useTheme } from '../composables/useTheme'
 import { useCustomTheme } from '../composables/useCustomTheme'
 import { useDueAlerts } from '../composables/useDueAlerts'
-import ThemeToggle from './ThemeToggle.vue'
-import ThemePicker from './ThemePicker.vue'
-import DueAlertsToggle from './DueAlertsToggle.vue'
 import DueAlertToast from './DueAlertToast.vue'
-import TodoHeader from './TodoHeader.vue'
+import TodoHeaderBar from './TodoHeaderBar.vue'
 import TodoInput from './TodoInput.vue'
-import TodoProgress from './TodoProgress.vue'
 import TodoToolbar from './TodoToolbar.vue'
 import TodoList from './TodoList.vue'
 import TodoRemovedList from './TodoRemovedList.vue'
@@ -69,12 +65,20 @@ const {
 <template>
 	<div class="d-flex justify-content-center align-items-start align-items-sm-center min-vh-100 py-5 px-3">
 		<div class="todo-card card border-0 shadow-lg w-100">
-			<div class="card-body p-3 p-sm-4 position-relative">
-				<ThemeToggle :is-dark="isDark" @toggle="toggleTheme" />
-				<ThemePicker :presets="presets" :active-key="themeKey" @select="setTheme" />
-				<DueAlertsToggle :enabled="dueAlertsEnabled" :permission="dueAlertsPermission" @toggle="toggleDueAlerts" />
-
-				<TodoHeader />
+			<div class="card-body p-3 p-sm-4">
+				<TodoHeaderBar
+					:remaining-count="remainingCount"
+					:total-count="totalCount"
+					:progress="progress"
+					:is-dark="isDark"
+					:presets="presets"
+					:theme-key="themeKey"
+					:due-alerts-enabled="dueAlertsEnabled"
+					:due-alerts-permission="dueAlertsPermission"
+					@toggle-theme="toggleTheme"
+					@select-theme="setTheme"
+					@toggle-due-alerts="toggleDueAlerts"
+				/>
 
 				<div v-if="saveError" class="save-error d-flex align-items-start gap-2 mb-3" role="alert">
 					<i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
@@ -82,8 +86,6 @@ const {
 				</div>
 
 				<TodoInput @add="addTodo" />
-
-				<TodoProgress v-if="totalCount" :remaining-count="remainingCount" :total-count="totalCount" :progress="progress" />
 
 				<TodoToolbar
 					v-model:view="view"

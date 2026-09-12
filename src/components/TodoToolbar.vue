@@ -1,12 +1,13 @@
 <script setup>
+import { computed } from 'vue'
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
 import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/sort'
-import { STATUSES } from '../constants/status'
+import { STATUSES, DEFAULT_STATUS } from '../constants/status'
 import { VIEWS, DEFAULT_VIEW } from '../constants/view'
 import { DUE_FILTERS } from '../constants/due'
 import TodoSearch from './TodoSearch.vue'
 
-defineProps({
+const props = defineProps({
 	view: { type: String, required: true },
 	statusFilter: { type: String, required: true },
 	priorityFilters: { type: Array, required: true },
@@ -25,6 +26,17 @@ defineEmits([
 	'clear-filters',
 ])
 
+// How many independent filter groups are narrowing the list, for the Clear
+// bar's label. Not the same as hasActiveFilters (a boolean already owned by
+// useTodos) — this just counts which of that same state is non-default.
+const activeFilterCount = computed(() => {
+	let count = 0
+	if (props.statusFilter !== DEFAULT_STATUS) count++
+	if (props.priorityFilters.length) count++
+	if (props.dueFilters.length) count++
+	if (props.searchQuery.trim()) count++
+	return count
+})
 </script>
 
 <template>
@@ -92,31 +104,32 @@ defineEmits([
 			</div>
 		</div>
 
-		<div class="d-flex flex-wrap align-items-center gap-2 filter-row">
-			<!-- Status only narrows the task list; the bin and the log have no active/completed split. -->
-			<div v-if="view === 'tasks'" class="segmented" role="group" aria-label="Status filter">
-				<button
-					v-for="s in STATUSES"
-					:key="s.key"
-					type="button"
-					class="segmented-btn"
-					:class="{ 'segmented-btn-active': statusFilter === s.key }"
-					:aria-pressed="statusFilter === s.key"
-					@click="$emit('update:statusFilter', s.key)"
-				>
-					{{ s.label }}
-				</button>
-			</div>
-
-			<button v-else type="button" class="btn btn-back" @click="$emit('update:view', DEFAULT_VIEW)">
-				<i class="bi bi-arrow-left"></i>
-				<span>{{ VIEWS.find((v) => v.key === view).label }}</span>
+		<!-- Status only narrows the task list; the bin and the log have no active/completed split. -->
+		<div v-if="view === 'tasks'" class="segmented segmented-full mb-2" role="group" aria-label="Status filter">
+			<button
+				v-for="s in STATUSES"
+				:key="s.key"
+				type="button"
+				class="segmented-btn"
+				:class="{ 'segmented-btn-active': statusFilter === s.key }"
+				:aria-pressed="statusFilter === s.key"
+				@click="$emit('update:statusFilter', s.key)"
+			>
+				{{ s.label }}
 			</button>
+		</div>
 
-			<span class="filter-divider d-none d-sm-block"></span>
+		<button v-else type="button" class="btn btn-back mb-2" @click="$emit('update:view', DEFAULT_VIEW)">
+			<i class="bi bi-arrow-left"></i>
+			<span>{{ VIEWS.find((v) => v.key === view).label }}</span>
+		</button>
 
+		<!-- One scrolling rail instead of a wrapping flex row, so the chips
+		     always read as a single line regardless of card width. Priority
+		     and due filters narrow every view, not just Tasks — same as before. -->
+		<div class="chip-rail mb-2">
 			<!-- No "All" chip: nothing selected already means every priority. -->
-			<div class="d-flex flex-wrap gap-2" role="group" aria-label="Priority filter">
+			<div class="d-flex flex-shrink-0 gap-2" role="group" aria-label="Priority filter">
 				<button
 					v-for="key in PRIORITY_ORDER"
 					:key="key"
@@ -134,8 +147,10 @@ defineEmits([
 				</button>
 			</div>
 
+			<span class="filter-divider"></span>
+
 			<!-- No "All" chip here either — same convention as priority. -->
-			<div class="d-flex flex-wrap gap-2" role="group" aria-label="Due date filter">
+			<div class="d-flex flex-shrink-0 gap-2" role="group" aria-label="Due date filter">
 				<button
 					v-for="d in DUE_FILTERS"
 					:key="d.key"
@@ -149,13 +164,13 @@ defineEmits([
 					{{ d.label }}
 				</button>
 			</div>
+		</div>
 
-			<button
-				v-if="hasActiveFilters"
-				type="button"
-				class="btn btn-clear ms-auto"
-				@click="$emit('clear-filters')"
-			>
+		<!-- Clear's home is fixed here, never on a wrapping row's ms-auto, so it
+		     can't jump position depending on how the chips above wrapped. -->
+		<div v-if="hasActiveFilters" class="filter-result">
+			<span class="filter-result-count">{{ activeFilterCount }} filter{{ activeFilterCount === 1 ? '' : 's' }} active</span>
+			<button type="button" class="btn btn-clear" @click="$emit('clear-filters')">
 				<i class="bi bi-x-lg"></i>Clear
 			</button>
 		</div>
@@ -215,11 +230,21 @@ defineEmits([
 	padding: 3px;
 	gap: 2px;
 }
+/* Full-width so status filtering never competes for space with the chips —
+   each option gets an equal share instead of shrinking to fit its label. */
+.segmented-full {
+	display: flex;
+	width: 100%;
+}
+.segmented-full .segmented-btn {
+	flex: 1 1 0;
+	text-align: center;
+}
 .segmented-btn {
 	border: none;
 	background: transparent;
 	border-radius: 8px;
-	padding: 0.25rem 0.7rem;
+	padding: 0.35rem 0.7rem;
 	font-size: 0.85rem;
 	font-weight: 500;
 	color: var(--text-done);
@@ -253,8 +278,25 @@ defineEmits([
 	color: var(--accent-strong);
 }
 
+/* Scrolls sideways instead of wrapping, so the two chip groups always read
+   as one line — the divider between them no longer needs to hide itself
+   below a breakpoint to avoid an awkward wrap. */
+.chip-rail {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	overflow-x: auto;
+	scrollbar-width: none;
+	-webkit-overflow-scrolling: touch;
+	padding-bottom: 2px;
+}
+.chip-rail::-webkit-scrollbar {
+	display: none;
+}
+
 .filter-divider {
 	width: 1px;
+	flex-shrink: 0;
 	align-self: stretch;
 	min-height: 22px;
 	background: var(--border);
@@ -266,6 +308,8 @@ defineEmits([
 	padding: 0.3rem 0.7rem;
 	font-size: 0.85rem;
 	font-weight: 500;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 .chip-danger {
 	background: var(--danger-bg);
@@ -299,14 +343,32 @@ defineEmits([
 	display: inline-block;
 }
 
+/* Its own row with a fixed shape, so Clear can no longer land wherever an
+   ms-auto happened to break a wrapping row — see the mobile layout redesign. */
+.filter-result {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: var(--accent-soft);
+	border-radius: 10px;
+	padding: 0.4rem 0.6rem;
+}
+.filter-result-count {
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--accent-strong);
+}
+
 .btn-clear {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
 	border: none;
+	background: transparent;
 	padding: 0.3rem 0.5rem;
 	font-size: 0.8rem;
-	color: var(--text-done);
+	font-weight: 600;
+	color: var(--accent-strong);
 }
 .btn-clear:hover {
 	color: var(--danger);

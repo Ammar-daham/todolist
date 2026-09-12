@@ -16,7 +16,7 @@ const label = () => {
 <template>
 	<button
 		type="button"
-		class="btn btn-sm btn-icon due-alerts-toggle"
+		class="btn btn-sm btn-icon toolbar-icon-btn"
 		:class="{ 'due-alerts-active': enabled }"
 		@click="$emit('toggle')"
 		:aria-label="label()"
@@ -33,20 +33,26 @@ const label = () => {
 	transition: opacity 0.15s ease, color 0.15s ease;
 }
 
-.due-alerts-toggle {
-	position: absolute;
-	top: 16px;
-	right: 108px;
-	font-size: 1.2rem;
-	width: 38px;
-	height: 38px;
-	border-radius: 50%;
+.toolbar-icon-btn {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	font-size: 1.1rem;
 	color: var(--text-done);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
-.due-alerts-toggle:hover {
+.toolbar-icon-btn:hover {
 	color: var(--accent);
+	background: var(--surface-alt-hover);
 }
 .due-alerts-active {
 	color: var(--accent);
+	background: var(--surface);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.due-alerts-active:hover {
+	background: var(--surface);
 }
 </style>

@@ -14,10 +14,10 @@ const groups = computed(() => [
 </script>
 
 <template>
-	<div class="dropdown theme-picker">
+	<div class="dropdown">
 		<button
 			type="button"
-			class="btn btn-sm btn-icon theme-picker-toggle"
+			class="btn btn-sm btn-icon toolbar-icon-btn"
 			data-bs-toggle="dropdown"
 			aria-expanded="false"
 			aria-label="Choose a background theme"
@@ -55,21 +55,19 @@ const groups = computed(() => [
 	transition: opacity 0.15s ease, color 0.15s ease;
 }
 
-.theme-picker {
-	position: absolute;
-	top: 16px;
-	right: 62px;
-}
-
-.theme-picker-toggle {
-	font-size: 1.2rem;
-	width: 38px;
-	height: 38px;
-	border-radius: 50%;
+.toolbar-icon-btn {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	font-size: 1.1rem;
 	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
-.theme-picker-toggle:hover {
+.toolbar-icon-btn:hover {
 	color: var(--accent-strong) !important;
+	background: var(--surface-alt-hover);
 }
 
 .theme-picker-menu {

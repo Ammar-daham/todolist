@@ -8,7 +8,7 @@ defineEmits(['toggle'])
 <template>
 	<button
 		type="button"
-		class="btn btn-sm btn-icon theme-toggle"
+		class="btn btn-sm btn-icon toolbar-icon-btn"
 		@click="$emit('toggle')"
 		:aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
 	>
@@ -20,20 +20,21 @@ defineEmits(['toggle'])
 .btn-icon {
 	border: none;
 	background: transparent;
-	transition: opacity 0.15s ease, color 0.15s ease;
+	transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
-.theme-toggle {
-	position: absolute;
-	top: 16px;
-	right: 16px;
-	font-size: 1.2rem;
-	width: 38px;
-	height: 38px;
-	border-radius: 50%;
+.toolbar-icon-btn {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	font-size: 1.1rem;
 	color: var(--accent);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
-.theme-toggle:hover {
+.toolbar-icon-btn:hover {
 	color: var(--accent-strong) !important;
+	background: var(--surface-alt-hover);
 }
 </style>

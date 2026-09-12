@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
+import { formatDueDate } from '../utils/time'
 
 const emit = defineEmits(['add'])
 
@@ -9,6 +10,12 @@ const priority = ref('medium')
 const dueDate = ref('')
 const dueTime = ref('')
 
+// The due-date/time pickers open in a panel below the fixed priority/due/Add
+// row instead of inline, so that row never has to squeeze to fit them — see
+// CLAUDE-guided mobile layout redesign.
+const dueOpen = ref(false)
+const dueDateInput = ref(null)
+
 function submit() {
 	if (!text.value.trim()) return
 	emit('add', text.value, priority.value, dueDate.value || null, dueDate.value ? dueTime.value || null : null)
@@ -16,6 +23,12 @@ function submit() {
 	priority.value = 'medium'
 	dueDate.value = ''
 	dueTime.value = ''
+	dueOpen.value = false
+}
+
+function toggleDuePanel() {
+	dueOpen.value = !dueOpen.value
+	if (dueOpen.value) nextTick(() => dueDateInput.value?.focus())
 }
 
 function clearDue() {
@@ -38,29 +51,57 @@ function clearDue() {
 			/>
 		</div>
 
-		<div class="todo-input-controls d-flex flex-wrap align-items-center gap-2">
-			<select v-model="priority" class="form-select form-select-sm w-auto priority-select" aria-label="Priority">
+		<!-- Fixed 3-up grid: priority, due (a button that never changes size),
+		     Add. Never wraps, regardless of what's picked. -->
+		<div class="input-row">
+			<select v-model="priority" class="form-select priority-select" aria-label="Priority">
 				<option v-for="key in PRIORITY_ORDER" :key="key" :value="key">{{ PRIORITIES[key].label }}</option>
 			</select>
 
-			<div class="due-date-row d-flex align-items-center gap-2">
-				<i class="bi bi-calendar-event text-muted"></i>
-				<input v-model="dueDate" type="date" class="form-control form-control-sm due-date-input" aria-label="Due date (optional)" />
+			<button
+				type="button"
+				class="btn due-toggle"
+				:class="{ 'due-toggle-set': dueDate, 'due-toggle-open': dueOpen }"
+				:aria-expanded="dueOpen"
+				@click="toggleDuePanel"
+			>
+				<i class="bi" :class="dueTime ? 'bi-alarm' : 'bi-calendar-event'"></i>
+				<span class="text-truncate">{{ dueDate ? formatDueDate(dueDate, dueTime) : 'Due date' }}</span>
+			</button>
+
+			<button class="btn btn-accent" type="submit" :disabled="!text.trim()">Add</button>
+		</div>
+
+		<!-- The panel grows the card instead of squeezing into the row above. -->
+		<div v-if="dueOpen" class="due-panel">
+			<div class="d-flex align-items-center gap-2">
+				<input
+					ref="dueDateInput"
+					v-model="dueDate"
+					type="date"
+					class="form-control form-control-sm due-panel-input"
+					aria-label="Due date"
+				/>
 				<input
 					v-if="dueDate"
 					v-model="dueTime"
 					type="time"
-					class="form-control form-control-sm due-time-input"
+					class="form-control form-control-sm due-panel-input"
 					aria-label="Due time (optional)"
 				/>
-				<button v-if="dueDate" type="button" class="btn btn-sm btn-link text-muted p-0 due-date-clear" @click="clearDue">
-					Clear
-				</button>
 			</div>
-
-			<button class="btn btn-accent px-4 ms-auto" type="submit" :disabled="!text.trim()">
-				Add
-			</button>
+			<div class="d-flex align-items-center justify-content-between mt-2">
+				<button
+					v-if="dueDate"
+					type="button"
+					class="btn btn-sm btn-link p-0 due-panel-clear"
+					@click="clearDue"
+				>
+					Clear due date
+				</button>
+				<span v-else></span>
+				<button type="button" class="btn btn-sm btn-accent due-panel-done" @click="dueOpen = false">Done</button>
+			</div>
 		</div>
 	</form>
 </template>
@@ -71,10 +112,62 @@ function clearDue() {
 }
 
 .todo-input-group .input-group-text,
-.todo-input-group .form-control,
-.priority-select {
+.todo-input-group .form-control {
 	border-color: var(--border);
 	background: var(--surface);
+}
+
+.input-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr 76px;
+	gap: 8px;
+}
+
+.priority-select {
+	height: 44px;
+	border-radius: 12px;
+	border-color: var(--border);
+	background-color: var(--surface);
+	color: inherit;
+	font-size: 0.85rem;
+	font-weight: 500;
+	padding-inline: 10px;
+}
+.priority-select:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+
+.due-toggle {
+	height: 44px;
+	border-radius: 12px;
+	border: 1px dashed var(--border);
+	background: var(--surface-alt);
+	color: var(--text-done);
+	font-size: 0.85rem;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding-inline: 10px;
+	min-width: 0;
+}
+.due-toggle span {
+	min-width: 0;
+}
+.due-toggle:hover {
+	background: var(--surface-alt-hover);
+}
+.due-toggle-set {
+	border-style: solid;
+	border-color: var(--border);
+	color: inherit;
+}
+.due-toggle-open {
+	border-style: solid;
+	border-color: var(--accent);
+	background: var(--accent-soft);
+	color: var(--accent-strong);
 }
 
 .btn-accent {
@@ -93,33 +186,45 @@ function clearDue() {
 	border-color: var(--accent);
 }
 
-.due-date-input {
-	max-width: 150px;
+.input-row > .btn-accent {
+	height: 44px;
+	border-radius: 12px;
+	font-weight: 600;
+	padding-inline: 0;
+}
+
+.due-panel {
+	margin-top: 8px;
+	border-radius: 12px;
+	background: var(--surface-alt);
+	border: 1px solid var(--border);
+	padding: 10px;
+}
+
+.due-panel-input {
+	flex: 1 1 0;
+	min-width: 0;
 	background: var(--surface);
 	border-color: var(--border);
 	color: inherit;
 }
-.due-date-input:focus {
+.due-panel-input:focus {
 	box-shadow: none;
 	border-color: var(--accent);
 }
 
-.due-time-input {
-	max-width: 110px;
-	background: var(--surface);
-	border-color: var(--border);
-	color: inherit;
-}
-.due-time-input:focus {
-	box-shadow: none;
-	border-color: var(--accent);
-}
-
-.due-date-clear {
+.due-panel-clear {
 	font-size: 0.8rem;
+	color: var(--danger);
 	text-decoration: none;
 }
-.due-date-clear:hover {
+.due-panel-clear:hover {
 	text-decoration: underline;
+}
+
+.due-panel-done {
+	border-radius: 9px;
+	font-size: 0.85rem;
+	padding: 0.35rem 0.9rem;
 }
 </style>
