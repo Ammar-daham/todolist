@@ -45,6 +45,10 @@ const {
 	setDueDate,
 	setPriority,
 	setNotes,
+	addSubtask,
+	editSubtask,
+	toggleSubtask,
+	removeSubtask,
 	toggleTodo,
 	removeTodo,
 	restoreTodo,
@@ -129,6 +133,10 @@ const {
 					@set-due-date="setDueDate"
 					@set-priority="setPriority"
 					@set-notes="setNotes"
+					@add-subtask="addSubtask"
+					@edit-subtask="editSubtask"
+					@toggle-subtask="toggleSubtask"
+					@remove-subtask="removeSubtask"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
 					@toggle-select-mode="toggleSelectMode"

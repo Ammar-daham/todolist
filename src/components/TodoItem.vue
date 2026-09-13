@@ -8,7 +8,19 @@ const props = defineProps({
 	selectMode: { type: Boolean, default: false },
 	selected: { type: Boolean, default: false },
 })
-const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'set-priority', 'set-notes', 'remove', 'toggle-select'])
+const emit = defineEmits([
+	'toggle',
+	'edit',
+	'set-due-date',
+	'set-priority',
+	'set-notes',
+	'add-subtask',
+	'edit-subtask',
+	'toggle-subtask',
+	'remove-subtask',
+	'remove',
+	'toggle-select',
+])
 
 const isEditing = ref(false)
 const draftText = ref('')
@@ -92,6 +104,48 @@ function cancelEditNotes() {
 function clearNotes() {
 	isEditingNotes.value = false
 	emit('set-notes', props.todo.id, null)
+}
+
+// Open by default whenever the task already has a checklist, so progress is
+// visible at a glance; collapsed otherwise to keep a plain task compact.
+const subtasksOpen = ref(props.todo.subtasks.length > 0)
+const newSubtaskText = ref('')
+const newSubtaskInput = ref(null)
+const subtaskCount = computed(() => props.todo.subtasks.length)
+const subtaskDoneCount = computed(() => props.todo.subtasks.filter((s) => s.done).length)
+
+function toggleSubtasksPanel() {
+	subtasksOpen.value = !subtasksOpen.value
+	if (subtasksOpen.value) nextTick(() => newSubtaskInput.value?.focus())
+}
+
+function submitNewSubtask() {
+	if (!newSubtaskText.value.trim()) return
+	emit('add-subtask', props.todo.id, newSubtaskText.value)
+	newSubtaskText.value = ''
+	nextTick(() => newSubtaskInput.value?.focus())
+}
+
+const editingSubtaskId = ref(null)
+const draftSubtaskText = ref('')
+
+function startEditSubtask(subtask) {
+	editingSubtaskId.value = subtask.id
+	draftSubtaskText.value = subtask.text
+}
+
+function saveEditSubtask(subtaskId) {
+	if (editingSubtaskId.value !== subtaskId) return
+	editingSubtaskId.value = null
+	const trimmed = draftSubtaskText.value.trim()
+	const subtask = props.todo.subtasks.find((s) => s.id === subtaskId)
+	if (trimmed && subtask && trimmed !== subtask.text) {
+		emit('edit-subtask', props.todo.id, subtaskId, trimmed)
+	}
+}
+
+function cancelEditSubtask() {
+	editingSubtaskId.value = null
 }
 </script>
 
@@ -190,6 +244,79 @@ function clearNotes() {
 					<button type="button" class="btn btn-sm btn-link p-0 due-clear" @mousedown.prevent="clearNotes">
 						Clear
 					</button>
+				</div>
+
+				<div class="todo-subtasks-row">
+					<button
+						type="button"
+						class="subtasks-badge"
+						:class="subtaskCount ? 'subtasks-filled' : 'subtasks-empty'"
+						@click="toggleSubtasksPanel"
+					>
+						<i class="bi bi-list-check"></i>
+						<span v-if="subtaskCount">{{ subtaskDoneCount }}/{{ subtaskCount }} subtasks</span>
+						<span v-else>Add subtasks</span>
+					</button>
+				</div>
+				<div v-if="subtasksOpen" class="subtasks-panel">
+					<ul class="list-unstyled mb-2 subtasks-list">
+						<li v-for="subtask in todo.subtasks" :key="subtask.id" class="subtask-row d-flex align-items-center gap-2">
+							<label class="subtask-check flex-shrink-0" :class="{ checked: subtask.done }">
+								<input
+									type="checkbox"
+									:checked="subtask.done"
+									@change="emit('toggle-subtask', todo.id, subtask.id)"
+								/>
+								<span class="subtask-check-box">
+									<i class="bi bi-check-lg"></i>
+								</span>
+							</label>
+							<input
+								v-if="editingSubtaskId === subtask.id"
+								v-model="draftSubtaskText"
+								type="text"
+								class="form-control form-control-sm subtask-edit-input"
+								@keyup.enter="saveEditSubtask(subtask.id)"
+								@keyup.esc="cancelEditSubtask"
+								@blur="saveEditSubtask(subtask.id)"
+							/>
+							<span
+								v-else
+								class="subtask-text flex-grow-1"
+								:class="{ 'subtask-done': subtask.done }"
+								@dblclick="startEditSubtask(subtask)"
+							>
+								{{ subtask.text }}
+							</span>
+							<button
+								type="button"
+								class="btn btn-sm btn-icon text-muted flex-shrink-0"
+								@click="emit('remove-subtask', todo.id, subtask.id)"
+								aria-label="Remove subtask"
+							>
+								<i class="bi bi-x-lg"></i>
+							</button>
+						</li>
+					</ul>
+					<div class="d-flex align-items-center gap-2">
+						<input
+							ref="newSubtaskInput"
+							v-model="newSubtaskText"
+							type="text"
+							class="form-control form-control-sm subtask-new-input"
+							placeholder="Add a subtask"
+							@keyup.enter="submitNewSubtask"
+						/>
+						<button
+							type="button"
+							class="btn btn-sm btn-icon text-muted flex-shrink-0"
+							:disabled="!newSubtaskText.trim()"
+							@click="submitNewSubtask"
+							aria-label="Add subtask"
+						>
+							<i class="bi bi-plus-lg"></i>
+						</button>
+					</div>
 				</div>
 			</template>
 		</div>
@@ -421,6 +548,112 @@ function clearNotes() {
 	resize: vertical;
 }
 .notes-edit-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+
+.todo-subtasks-row {
+	margin-top: 4px;
+}
+
+.subtasks-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: none;
+	border-radius: 999px;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	font-weight: 500;
+	cursor: pointer;
+	background: var(--surface-alt-hover);
+	color: var(--text-done);
+}
+.subtasks-badge:hover {
+	filter: brightness(0.96);
+}
+.subtasks-empty {
+	background: transparent;
+	border: 1px dashed var(--border);
+	opacity: 0.6;
+}
+.subtasks-empty:hover {
+	opacity: 1;
+}
+
+.subtasks-panel {
+	margin-top: 6px;
+	border-radius: 12px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	padding: 8px;
+}
+
+.subtasks-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.subtask-check {
+	position: relative;
+	display: inline-flex;
+	cursor: pointer;
+}
+.subtask-check input {
+	position: absolute;
+	opacity: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	cursor: pointer;
+}
+.subtask-check-box {
+	width: 18px;
+	height: 18px;
+	border-radius: 6px;
+	border: 2px solid var(--checkbox-border);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: transparent;
+	transition: all 0.15s ease;
+	background: var(--checkbox-bg);
+}
+.subtask-check.checked .subtask-check-box {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-contrast);
+}
+.subtask-check-box i {
+	font-size: 0.7rem;
+}
+
+.subtask-text {
+	font-size: 0.85rem;
+	word-break: break-word;
+}
+.subtask-done {
+	text-decoration: line-through;
+	color: var(--text-done);
+}
+
+.subtask-edit-input {
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+}
+.subtask-edit-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+
+.subtask-new-input {
+	background: var(--surface-alt);
+	border-color: var(--border);
+	color: inherit;
+}
+.subtask-new-input:focus {
 	box-shadow: none;
 	border-color: var(--accent);
 }

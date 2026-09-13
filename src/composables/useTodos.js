@@ -38,7 +38,10 @@ function loadTodos() {
 			dueDate: null,
 			dueTime: null,
 			notes: null,
+			subtasks: [],
 			...todo,
+			// Guard against a corrupted/legacy value that isn't actually an array.
+			subtasks: Array.isArray(todo.subtasks) ? todo.subtasks : [],
 			// Todos saved before lists existed have no listId — fold them into
 			// the default list so nothing already on the board disappears.
 			listId: todo.listId ?? DEFAULT_LIST_ID,
@@ -149,6 +152,7 @@ export function useTodos(activeListId) {
 			dueDate,
 			dueTime: dueDate ? dueTime : null,
 			notes: notes ? notes.trim() || null : null,
+			subtasks: [],
 			listId: activeListId.value,
 			createdAt: Date.now(),
 			completedAt: null,
@@ -187,6 +191,34 @@ export function useTodos(activeListId) {
 		if (!todo) return
 		const trimmed = typeof notes === 'string' ? notes.trim() : ''
 		todo.notes = trimmed || null
+	}
+
+	function addSubtask(todoId, text) {
+		const trimmed = text.trim()
+		if (!trimmed) return
+		const todo = todos.value.find((t) => t.id === todoId)
+		if (!todo) return
+		todo.subtasks.push({ id: Date.now(), text: trimmed, done: false })
+	}
+
+	function editSubtask(todoId, subtaskId, text) {
+		const trimmed = text.trim()
+		if (!trimmed) return
+		const todo = todos.value.find((t) => t.id === todoId)
+		const subtask = todo?.subtasks.find((s) => s.id === subtaskId)
+		if (subtask) subtask.text = trimmed
+	}
+
+	function toggleSubtask(todoId, subtaskId) {
+		const todo = todos.value.find((t) => t.id === todoId)
+		const subtask = todo?.subtasks.find((s) => s.id === subtaskId)
+		if (subtask) subtask.done = !subtask.done
+	}
+
+	function removeSubtask(todoId, subtaskId) {
+		const todo = todos.value.find((t) => t.id === todoId)
+		if (!todo) return
+		todo.subtasks = todo.subtasks.filter((s) => s.id !== subtaskId)
 	}
 
 	function toggleTodo(id) {
@@ -386,6 +418,10 @@ export function useTodos(activeListId) {
 		setDueDate,
 		setPriority,
 		setNotes,
+		addSubtask,
+		editSubtask,
+		toggleSubtask,
+		removeSubtask,
 		toggleTodo,
 		removeTodo,
 		restoreTodo,

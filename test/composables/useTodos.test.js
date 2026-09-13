@@ -122,6 +122,74 @@ describe('editing and status changes', () => {
 	})
 })
 
+describe('subtasks', () => {
+	it('adds a trimmed subtask, ignoring blank input', () => {
+		const { addTodo, addSubtask, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+
+		addSubtask(id, '  Buy flour  ')
+		addSubtask(id, '   ')
+
+		expect(allTodos.value[0].subtasks).toHaveLength(1)
+		expect(allTodos.value[0].subtasks[0].text).toBe('Buy flour')
+		expect(allTodos.value[0].subtasks[0].done).toBe(false)
+	})
+
+	it('toggles a subtask done/undone', () => {
+		const { addTodo, addSubtask, toggleSubtask, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+		addSubtask(id, 'Step one')
+		const subtaskId = allTodos.value[0].subtasks[0].id
+
+		toggleSubtask(id, subtaskId)
+		expect(allTodos.value[0].subtasks[0].done).toBe(true)
+
+		toggleSubtask(id, subtaskId)
+		expect(allTodos.value[0].subtasks[0].done).toBe(false)
+	})
+
+	it('edits a subtask, trimming and ignoring blank edits', () => {
+		const { addTodo, addSubtask, editSubtask, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+		addSubtask(id, 'Step one')
+		const subtaskId = allTodos.value[0].subtasks[0].id
+
+		editSubtask(id, subtaskId, '  Step one, revised  ')
+		expect(allTodos.value[0].subtasks[0].text).toBe('Step one, revised')
+
+		editSubtask(id, subtaskId, '   ')
+		expect(allTodos.value[0].subtasks[0].text).toBe('Step one, revised')
+	})
+
+	it('removes a subtask', () => {
+		const { addTodo, addSubtask, removeSubtask, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+		addSubtask(id, 'Step one')
+		addSubtask(id, 'Step two')
+		const [first] = allTodos.value[0].subtasks
+
+		removeSubtask(id, first.id)
+
+		expect(allTodos.value[0].subtasks.map((s) => s.text)).toEqual(['Step two'])
+	})
+
+	it('keeps each task\'s subtasks independent', () => {
+		const { addTodo, addSubtask, allTodos } = setup()
+		addTodo('Task A', 'low')
+		addTodo('Task B', 'low')
+		const [a, b] = allTodos.value
+
+		addSubtask(a.id, 'Only on A')
+
+		expect(allTodos.value.find((t) => t.id === a.id).subtasks).toHaveLength(1)
+		expect(allTodos.value.find((t) => t.id === b.id).subtasks).toHaveLength(0)
+	})
+})
+
 describe('removal and lists', () => {
 	it('soft-deletes and restores a task', () => {
 		const { addTodo, removeTodo, restoreTodo, allTodos, removedTodos } = setup()
@@ -358,6 +426,13 @@ describe('persistence', () => {
 		expect(todo.removedAt).toBeNull()
 		expect(todo.dueDate).toBeNull()
 		expect(todo.notes).toBeNull()
+		expect(todo.subtasks).toEqual([])
+	})
+
+	it('recovers a non-array subtasks value on legacy/corrupted data', () => {
+		localStorage.setItem('todo-app.todos', JSON.stringify([{ id: 1, text: 'Legacy', done: false, subtasks: 'oops' }]))
+		const { allTodos } = setup()
+		expect(allTodos.value[0].subtasks).toEqual([])
 	})
 
 	it('recovers from corrupted todos JSON instead of throwing', () => {
