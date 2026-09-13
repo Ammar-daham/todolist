@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildEvents, groupEvents } from './history'
+import { buildEvents, groupEvents } from '../../src/utils/history'
 
 function makeTodo(overrides = {}) {
 	return {

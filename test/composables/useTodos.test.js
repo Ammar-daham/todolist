@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref, nextTick } from 'vue'
-import { useTodos } from './useTodos'
-import { DEFAULT_LIST_ID } from './useLists'
+import { useTodos } from '../../src/composables/useTodos'
+import { DEFAULT_LIST_ID } from '../../src/composables/useLists'
 
 // addTodo/toggleTodo/etc. all stamp with Date.now(), and calling them back to
 // back in a test can land in the same millisecond — mock it so every call

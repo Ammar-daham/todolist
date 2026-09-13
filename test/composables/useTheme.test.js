@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useTheme } from './useTheme'
+import { useTheme } from '../../src/composables/useTheme'
 
 function mockMatchMedia(matches) {
 	window.matchMedia = vi.fn().mockImplementation((query) => ({

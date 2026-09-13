@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useLists, DEFAULT_LIST_ID } from './useLists'
+import { useLists, DEFAULT_LIST_ID } from '../../src/composables/useLists'
 
 beforeEach(() => {
 	localStorage.clear()

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { formatRelativeTime, formatDueTime, formatDueDate, parseDueDateTime, getDueStatus } from './time'
+import { formatRelativeTime, formatDueTime, formatDueDate, parseDueDateTime, getDueStatus } from '../../src/utils/time'
 
 describe('formatRelativeTime', () => {
 	afterEach(() => vi.useRealTimers())

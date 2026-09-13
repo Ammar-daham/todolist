@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createApp, ref } from 'vue'
-import { useDueAlerts } from './useDueAlerts'
+import { useDueAlerts } from '../../src/composables/useDueAlerts'
 
 // useDueAlerts relies on onMounted/onUnmounted, so it needs a real component
 // instance around it — calling it bare would skip those lifecycle hooks.
