@@ -190,6 +190,71 @@ describe('subtasks', () => {
 	})
 })
 
+describe('tags', () => {
+	it('adds a trimmed tag on creation and via addTag, de-duping case-insensitively', () => {
+		const { addTodo, addTag, allTodos } = setup()
+		addTodo('Task', 'low', null, null, null, ['  Work  ', 'urgent'])
+		const id = allTodos.value[0].id
+
+		expect(allTodos.value[0].tags).toEqual(['Work', 'urgent'])
+
+		addTag(id, 'WORK') // already present case-insensitively — ignored
+		addTag(id, '  errand  ')
+		addTag(id, '   ') // blank — ignored
+
+		expect(allTodos.value[0].tags).toEqual(['Work', 'urgent', 'errand'])
+	})
+
+	it('removes a tag', () => {
+		const { addTodo, removeTag, allTodos } = setup()
+		addTodo('Task', 'low', null, null, null, ['work', 'urgent'])
+		const id = allTodos.value[0].id
+
+		removeTag(id, 'work')
+
+		expect(allTodos.value[0].tags).toEqual(['urgent'])
+	})
+
+	it('lists distinct tags in use across the active list, sorted, for filter chips', () => {
+		const state = setup()
+		state.addTodo('One', 'low', null, null, null, ['work', 'personal'])
+		state.addTodo('Two', 'low', null, null, null, ['Zebra', 'work'])
+
+		expect(state.allTags.value).toEqual(['personal', 'work', 'Zebra'])
+	})
+
+	it('filters by tag, matching any selected tag', () => {
+		const state = setup()
+		state.addTodo('Groceries', 'low', null, null, null, ['errand'])
+		state.addTodo('Report', 'low', null, null, null, ['work'])
+		state.addTodo('Untagged', 'low')
+
+		state.toggleTagFilter('work')
+
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['Report'])
+	})
+
+	it('matches search text against tags', () => {
+		const state = setup()
+		state.addTodo('Groceries', 'low', null, null, null, ['errand'])
+		state.addTodo('Report', 'low')
+
+		state.searchQuery.value = 'errand'
+
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['Groceries'])
+	})
+
+	it('clearFilters also resets tag filters', () => {
+		const state = setup()
+		state.addTodo('Task', 'low', null, null, null, ['work'])
+		state.toggleTagFilter('work')
+
+		state.clearFilters()
+
+		expect(state.tagFilters.value).toEqual([])
+	})
+})
+
 describe('removal and lists', () => {
 	it('soft-deletes and restores a task', () => {
 		const { addTodo, removeTodo, restoreTodo, allTodos, removedTodos } = setup()
@@ -433,6 +498,12 @@ describe('persistence', () => {
 		localStorage.setItem('todo-app.todos', JSON.stringify([{ id: 1, text: 'Legacy', done: false, subtasks: 'oops' }]))
 		const { allTodos } = setup()
 		expect(allTodos.value[0].subtasks).toEqual([])
+	})
+
+	it('recovers a non-array tags value on legacy/corrupted data', () => {
+		localStorage.setItem('todo-app.todos', JSON.stringify([{ id: 1, text: 'Legacy', done: false, tags: 'oops' }]))
+		const { allTodos } = setup()
+		expect(allTodos.value[0].tags).toEqual([])
 	})
 
 	it('recovers from corrupted todos JSON instead of throwing', () => {

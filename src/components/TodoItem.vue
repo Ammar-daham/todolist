@@ -14,6 +14,8 @@ const emit = defineEmits([
 	'set-due-date',
 	'set-priority',
 	'set-notes',
+	'add-tag',
+	'remove-tag',
 	'add-subtask',
 	'edit-subtask',
 	'toggle-subtask',
@@ -104,6 +106,29 @@ function cancelEditNotes() {
 function clearNotes() {
 	isEditingNotes.value = false
 	emit('set-notes', props.todo.id, null)
+}
+
+// Adding a tag is a single atomic action (unlike text/notes, there's no
+// draft-then-save step) — the input just clears itself and stays focused so
+// several tags can be typed in a row.
+const isAddingTag = ref(false)
+const newTagText = ref('')
+const newTagInput = ref(null)
+
+function startAddTag() {
+	isAddingTag.value = true
+	nextTick(() => newTagInput.value?.focus())
+}
+
+function submitNewTag() {
+	if (!newTagText.value.trim()) return
+	emit('add-tag', props.todo.id, newTagText.value)
+	newTagText.value = ''
+}
+
+function stopAddingTag() {
+	isAddingTag.value = false
+	newTagText.value = ''
 }
 
 // Open by default whenever the task already has a checklist, so progress is
@@ -243,6 +268,34 @@ function cancelEditSubtask() {
 					></textarea>
 					<button type="button" class="btn btn-sm btn-link p-0 due-clear" @mousedown.prevent="clearNotes">
 						Clear
+					</button>
+				</div>
+
+				<div class="todo-tags-row d-flex flex-wrap align-items-center gap-1">
+					<span v-for="tag in todo.tags" :key="tag" class="tag-chip">
+						{{ tag }}
+						<button
+							type="button"
+							class="tag-chip-remove"
+							@click="emit('remove-tag', todo.id, tag)"
+							:aria-label="`Remove tag ${tag}`"
+						>
+							<i class="bi bi-x"></i>
+						</button>
+					</span>
+					<input
+						v-if="isAddingTag"
+						ref="newTagInput"
+						v-model="newTagText"
+						type="text"
+						class="tag-new-input"
+						placeholder="Tag"
+						@keyup.enter="submitNewTag"
+						@keyup.esc="stopAddingTag"
+						@blur="stopAddingTag"
+					/>
+					<button v-else type="button" class="tag-add-btn" @click="startAddTag">
+						<i class="bi bi-plus"></i>{{ todo.tags.length ? '' : 'Add tag' }}
 					</button>
 				</div>
 
@@ -550,6 +603,65 @@ function cancelEditSubtask() {
 .notes-edit-input:focus {
 	box-shadow: none;
 	border-color: var(--accent);
+}
+
+.todo-tags-row {
+	margin-top: 4px;
+}
+
+.tag-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+	border-radius: 999px;
+	padding: 2px 4px 2px 8px;
+	font-size: 0.68rem;
+	font-weight: 600;
+}
+
+.tag-chip-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: transparent;
+	color: inherit;
+	opacity: 0.7;
+	padding: 0;
+	line-height: 1;
+}
+.tag-chip-remove:hover {
+	opacity: 1;
+	color: var(--danger);
+}
+
+.tag-add-btn {
+	display: inline-flex;
+	align-items: center;
+	border: 1px dashed var(--border);
+	border-radius: 999px;
+	background: transparent;
+	color: var(--text-done);
+	opacity: 0.6;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	font-weight: 500;
+}
+.tag-add-btn:hover {
+	opacity: 1;
+}
+
+.tag-new-input {
+	border: 1px solid var(--accent);
+	border-radius: 999px;
+	background: var(--surface);
+	color: inherit;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	width: 90px;
+	outline: none;
 }
 
 .todo-subtasks-row {

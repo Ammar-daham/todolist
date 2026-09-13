@@ -10,6 +10,8 @@ const priority = ref('medium')
 const dueDate = ref('')
 const dueTime = ref('')
 const notes = ref('')
+const tags = ref([])
+const newTagText = ref('')
 
 // The due-date/time pickers open in a panel below the fixed priority/due/Add
 // row instead of inline, so that row never has to squeeze to fit them — see
@@ -30,7 +32,8 @@ function submit() {
 		priority.value,
 		dueDate.value || null,
 		dueDate.value ? dueTime.value || null : null,
-		notes.value.trim() || null
+		notes.value.trim() || null,
+		tags.value
 	)
 	text.value = ''
 	priority.value = 'medium'
@@ -39,6 +42,21 @@ function submit() {
 	dueOpen.value = false
 	notes.value = ''
 	notesOpen.value = false
+	tags.value = []
+	newTagText.value = ''
+}
+
+function addTagFromInput() {
+	const trimmed = newTagText.value.trim()
+	if (!trimmed) return
+	if (!tags.value.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+		tags.value.push(trimmed)
+	}
+	newTagText.value = ''
+}
+
+function removeTagAt(index) {
+	tags.value.splice(index, 1)
 }
 
 function toggleDuePanel() {
@@ -96,6 +114,23 @@ function clearNotes() {
 				<span v-else></span>
 				<button type="button" class="btn btn-sm btn-accent due-panel-done" @click="notesOpen = false">Done</button>
 			</div>
+		</div>
+
+		<div class="tags-row d-flex flex-wrap align-items-center gap-1 mb-2">
+			<span v-for="(tag, index) in tags" :key="tag" class="tag-chip">
+				{{ tag }}
+				<button type="button" class="tag-chip-remove" @click="removeTagAt(index)" :aria-label="`Remove tag ${tag}`">
+					<i class="bi bi-x"></i>
+				</button>
+			</span>
+			<input
+				v-model="newTagText"
+				type="text"
+				class="tag-new-input"
+				placeholder="Add tag"
+				@keyup.enter="addTagFromInput"
+				@blur="addTagFromInput"
+			/>
 		</div>
 
 		<!-- Fixed 3-up grid: priority, due (a button that never changes size),
@@ -299,6 +334,50 @@ function clearNotes() {
 }
 .notes-panel-input:focus {
 	box-shadow: none;
+	border-color: var(--accent);
+}
+
+.tag-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+	border-radius: 999px;
+	padding: 3px 5px 3px 10px;
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.tag-chip-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	background: transparent;
+	color: inherit;
+	opacity: 0.7;
+	padding: 0;
+	line-height: 1;
+}
+.tag-chip-remove:hover {
+	opacity: 1;
+	color: var(--danger);
+}
+
+.tag-new-input {
+	border: 1px dashed var(--border);
+	border-radius: 999px;
+	background: var(--surface-alt);
+	color: inherit;
+	padding: 3px 10px;
+	font-size: 0.78rem;
+	flex: 1 1 100px;
+	min-width: 90px;
+	outline: none;
+}
+.tag-new-input:focus {
+	border-style: solid;
 	border-color: var(--accent);
 }
 </style>

@@ -12,6 +12,8 @@ const props = defineProps({
 	statusFilter: { type: String, required: true },
 	priorityFilters: { type: Array, required: true },
 	dueFilters: { type: Array, required: true },
+	tagFilters: { type: Array, required: true },
+	allTags: { type: Array, required: true },
 	searchQuery: { type: String, required: true },
 	sortBy: { type: String, required: true },
 	hasActiveFilters: { type: Boolean, required: true },
@@ -23,6 +25,7 @@ defineEmits([
 	'update:sortBy',
 	'toggle-priority',
 	'toggle-due',
+	'toggle-tag',
 	'clear-filters',
 ])
 
@@ -34,6 +37,7 @@ const activeFilterCount = computed(() => {
 	if (props.statusFilter !== DEFAULT_STATUS) count++
 	if (props.priorityFilters.length) count++
 	if (props.dueFilters.length) count++
+	if (props.tagFilters.length) count++
 	if (props.searchQuery.trim()) count++
 	return count
 })
@@ -164,6 +168,26 @@ const activeFilterCount = computed(() => {
 					{{ d.label }}
 				</button>
 			</div>
+
+			<!-- Tags are free-form data, not a fixed constant, so this group only
+			     shows up once at least one task in the active list actually has one. -->
+			<template v-if="allTags.length">
+				<span class="filter-divider"></span>
+				<div class="d-flex flex-shrink-0 gap-2" role="group" aria-label="Tag filter">
+					<button
+						v-for="tag in allTags"
+						:key="tag"
+						type="button"
+						class="btn chip chip-tag d-flex align-items-center gap-1"
+						:class="{ 'chip-active': tagFilters.includes(tag) }"
+						:aria-pressed="tagFilters.includes(tag)"
+						@click="$emit('toggle-tag', tag)"
+					>
+						<i class="bi bi-tag-fill"></i>
+						{{ tag }}
+					</button>
+				</div>
+			</template>
 		</div>
 
 		<!-- Clear's home is fixed here, never on a wrapping row's ms-auto, so it
@@ -334,6 +358,15 @@ const activeFilterCount = computed(() => {
 .chip-success.chip-active {
 	background: var(--success);
 	color: #fff;
+}
+
+.chip-tag {
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+}
+.chip-tag.chip-active {
+	background: var(--accent);
+	color: var(--accent-contrast);
 }
 
 .chip-dot {

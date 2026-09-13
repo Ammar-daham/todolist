@@ -28,6 +28,23 @@ const SORTERS = {
 const STORAGE_KEY = 'todo-app.todos'
 const FILTERS_STORAGE_KEY = 'todo-app.filters'
 
+// Trims each tag, drops blanks, and de-dupes case-insensitively (keeping the
+// first-seen casing) — shared by addTodo's initial tags and addTag below so
+// a task can't end up with both "Work" and "work".
+function normalizeTags(tags) {
+	const seen = new Set()
+	const result = []
+	for (const raw of tags) {
+		const trimmed = typeof raw === 'string' ? raw.trim() : ''
+		if (!trimmed) continue
+		const key = trimmed.toLowerCase()
+		if (seen.has(key)) continue
+		seen.add(key)
+		result.push(trimmed)
+	}
+	return result
+}
+
 function loadTodos() {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY)
@@ -39,9 +56,11 @@ function loadTodos() {
 			dueTime: null,
 			notes: null,
 			subtasks: [],
+			tags: [],
 			...todo,
 			// Guard against a corrupted/legacy value that isn't actually an array.
 			subtasks: Array.isArray(todo.subtasks) ? todo.subtasks : [],
+			tags: Array.isArray(todo.tags) ? todo.tags : [],
 			// Todos saved before lists existed have no listId — fold them into
 			// the default list so nothing already on the board disappears.
 			listId: todo.listId ?? DEFAULT_LIST_ID,
@@ -60,6 +79,7 @@ function loadFilterState() {
 		statusFilter: DEFAULT_STATUS,
 		priorityFilters: [],
 		dueFilters: [],
+		tagFilters: [],
 		sortBy: DEFAULT_SORT,
 	}
 	try {
@@ -75,6 +95,12 @@ function loadFilterState() {
 			dueFilters: Array.isArray(parsed.dueFilters)
 				? parsed.dueFilters.filter((key) => VALID_DUE_FILTERS.includes(key))
 				: defaults.dueFilters,
+			// Tags are free-form, so there's no fixed vocabulary to validate
+			// against — just make sure it's a list of strings. A tag filter that
+			// no longer exists in the data simply matches nothing, harmlessly.
+			tagFilters: Array.isArray(parsed.tagFilters)
+				? parsed.tagFilters.filter((tag) => typeof tag === 'string')
+				: defaults.tagFilters,
 			sortBy: VALID_SORTS.includes(parsed.sortBy) ? parsed.sortBy : defaults.sortBy,
 		}
 	} catch {
@@ -96,6 +122,9 @@ export function useTodos(activeListId) {
 	// Same convention: empty means every due-date bucket. Keys match getDueStatus
 	// ('overdue' / 'upcoming') so a chip means exactly what its item badge shows.
 	const dueFilters = ref(savedFilters.dueFilters)
+	// Same convention as priority/due, but the vocabulary is whatever tags exist
+	// in the data (see allTags) rather than a fixed set of constants.
+	const tagFilters = ref(savedFilters.tagFilters)
 	// Not persisted — see loadFilterState.
 	const searchQuery = ref('')
 	// Ordering, independent of filtering — changing it never hides a task.
@@ -104,7 +133,7 @@ export function useTodos(activeListId) {
 	// Remember the toolbar's state across visits, same as todos above. A
 	// failure here is a lost preference, not lost data, so it's logged but
 	// doesn't need its own user-facing error like saveError.
-	watch([view, statusFilter, priorityFilters, dueFilters, sortBy], () => {
+	watch([view, statusFilter, priorityFilters, dueFilters, tagFilters, sortBy], () => {
 		try {
 			localStorage.setItem(
 				FILTERS_STORAGE_KEY,
@@ -113,6 +142,7 @@ export function useTodos(activeListId) {
 					statusFilter: statusFilter.value,
 					priorityFilters: priorityFilters.value,
 					dueFilters: dueFilters.value,
+					tagFilters: tagFilters.value,
 					sortBy: sortBy.value,
 				})
 			)
@@ -141,7 +171,7 @@ export function useTodos(activeListId) {
 		{ deep: true }
 	)
 
-	function addTodo(text, priority, dueDate = null, dueTime = null, notes = null) {
+	function addTodo(text, priority, dueDate = null, dueTime = null, notes = null, tags = []) {
 		const trimmed = text.trim()
 		if (!trimmed) return
 		todos.value.push({
@@ -153,6 +183,7 @@ export function useTodos(activeListId) {
 			dueTime: dueDate ? dueTime : null,
 			notes: notes ? notes.trim() || null : null,
 			subtasks: [],
+			tags: normalizeTags(tags),
 			listId: activeListId.value,
 			createdAt: Date.now(),
 			completedAt: null,
@@ -191,6 +222,21 @@ export function useTodos(activeListId) {
 		if (!todo) return
 		const trimmed = typeof notes === 'string' ? notes.trim() : ''
 		todo.notes = trimmed || null
+	}
+
+	function addTag(id, tag) {
+		const trimmed = tag.trim()
+		if (!trimmed) return
+		const todo = todos.value.find((t) => t.id === id)
+		if (!todo) return
+		if (todo.tags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) return
+		todo.tags.push(trimmed)
+	}
+
+	function removeTag(id, tag) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (!todo) return
+		todo.tags = todo.tags.filter((t) => t !== tag)
 	}
 
 	function addSubtask(todoId, text) {
@@ -259,10 +305,16 @@ export function useTodos(activeListId) {
 		dueFilters.value = current.includes(key) ? current.filter((d) => d !== key) : [...current, key]
 	}
 
+	function toggleTagFilter(tag) {
+		const current = tagFilters.value
+		tagFilters.value = current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag]
+	}
+
 	function clearFilters() {
 		statusFilter.value = DEFAULT_STATUS
 		priorityFilters.value = []
 		dueFilters.value = []
+		tagFilters.value = []
 		searchQuery.value = ''
 	}
 
@@ -271,6 +323,7 @@ export function useTodos(activeListId) {
 			statusFilter.value !== DEFAULT_STATUS ||
 			priorityFilters.value.length > 0 ||
 			dueFilters.value.length > 0 ||
+			tagFilters.value.length > 0 ||
 			searchQuery.value.trim() !== ''
 	)
 
@@ -278,15 +331,33 @@ export function useTodos(activeListId) {
 	// like the priority/due/search filters already do below.
 	const todosInActiveList = computed(() => todos.value.filter((t) => t.listId === activeListId.value))
 
+	// Tags are free-form, so — unlike priority/due — there's no fixed set of
+	// filter chips to render. This derives that vocabulary from whatever's
+	// actually in use in the active list, independent of the other filters
+	// currently applied, so toggling one tag doesn't make the others vanish.
+	const allTags = computed(() => {
+		const tags = new Set()
+		todosInActiveList.value.forEach((t) => {
+			if (!t.removedAt) t.tags.forEach((tag) => tags.add(tag))
+		})
+		return [...tags].sort((a, b) => a.localeCompare(b))
+	})
+
 	const visibleTodos = computed(() => {
 		const query = searchQuery.value.trim().toLowerCase()
 		const priorities = priorityFilters.value
 		const dues = dueFilters.value
+		const tags = tagFilters.value
 		return todosInActiveList.value.filter((t) => {
 			const matchesPriority = !priorities.length || priorities.includes(t.priority || 'medium')
 			const matchesDue = !dues.length || dues.includes(getDueStatus(t.dueDate, t.done))
-			const matchesSearch = !query || t.text.toLowerCase().includes(query) || (t.notes ?? '').toLowerCase().includes(query)
-			return matchesPriority && matchesDue && matchesSearch
+			const matchesTags = !tags.length || tags.some((tag) => t.tags.includes(tag))
+			const matchesSearch =
+				!query ||
+				t.text.toLowerCase().includes(query) ||
+				(t.notes ?? '').toLowerCase().includes(query) ||
+				t.tags.some((tag) => tag.toLowerCase().includes(query))
+			return matchesPriority && matchesDue && matchesTags && matchesSearch
 		})
 	})
 
@@ -392,11 +463,14 @@ export function useTodos(activeListId) {
 		statusFilter,
 		priorityFilters,
 		dueFilters,
+		tagFilters,
+		allTags,
 		searchQuery,
 		sortBy,
 		hasActiveFilters,
 		togglePriorityFilter,
 		toggleDueFilter,
+		toggleTagFilter,
 		clearFilters,
 		filteredTodos,
 		removedTodos,
@@ -418,6 +492,8 @@ export function useTodos(activeListId) {
 		setDueDate,
 		setPriority,
 		setNotes,
+		addTag,
+		removeTag,
 		addSubtask,
 		editSubtask,
 		toggleSubtask,

@@ -17,6 +17,8 @@ const emit = defineEmits([
 	'set-due-date',
 	'set-priority',
 	'set-notes',
+	'add-tag',
+	'remove-tag',
 	'add-subtask',
 	'edit-subtask',
 	'toggle-subtask',
@@ -54,6 +56,8 @@ function handleToggleSelectAll() {
 			@set-due-date="(id, date, time) => $emit('set-due-date', id, date, time)"
 			@set-priority="(id, priority) => $emit('set-priority', id, priority)"
 			@set-notes="(id, notes) => $emit('set-notes', id, notes)"
+			@add-tag="(id, tag) => $emit('add-tag', id, tag)"
+			@remove-tag="(id, tag) => $emit('remove-tag', id, tag)"
 			@add-subtask="(id, text) => $emit('add-subtask', id, text)"
 			@edit-subtask="(id, subtaskId, text) => $emit('edit-subtask', id, subtaskId, text)"
 			@toggle-subtask="(id, subtaskId) => $emit('toggle-subtask', id, subtaskId)"

@@ -19,11 +19,14 @@ const {
 	statusFilter,
 	priorityFilters,
 	dueFilters,
+	tagFilters,
+	allTags,
 	searchQuery,
 	sortBy,
 	hasActiveFilters,
 	togglePriorityFilter,
 	toggleDueFilter,
+	toggleTagFilter,
 	clearFilters,
 	filteredTodos,
 	removedTodos,
@@ -45,6 +48,8 @@ const {
 	setDueDate,
 	setPriority,
 	setNotes,
+	addTag,
+	removeTag,
 	addSubtask,
 	editSubtask,
 	toggleSubtask,
@@ -114,9 +119,12 @@ const {
 					v-model:sort-by="sortBy"
 					:priority-filters="priorityFilters"
 					:due-filters="dueFilters"
+					:tag-filters="tagFilters"
+					:all-tags="allTags"
 					:has-active-filters="hasActiveFilters"
 					@toggle-priority="togglePriorityFilter"
 					@toggle-due="toggleDueFilter"
+					@toggle-tag="toggleTagFilter"
 					@clear-filters="clearFilters"
 				/>
 
@@ -133,6 +141,8 @@ const {
 					@set-due-date="setDueDate"
 					@set-priority="setPriority"
 					@set-notes="setNotes"
+					@add-tag="addTag"
+					@remove-tag="removeTag"
 					@add-subtask="addSubtask"
 					@edit-subtask="editSubtask"
 					@toggle-subtask="toggleSubtask"
