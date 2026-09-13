@@ -10,6 +10,7 @@ const props = defineProps({
 	hasAnyTodos: { type: Boolean, required: true },
 	selectMode: { type: Boolean, required: true },
 	selectedIds: { type: Array, required: true },
+	sortBy: { type: String, required: true },
 })
 const emit = defineEmits([
 	'toggle',
@@ -24,6 +25,7 @@ const emit = defineEmits([
 	'toggle-subtask',
 	'remove-subtask',
 	'remove',
+	'reorder',
 	'clear-completed',
 	'toggle-select-mode',
 	'toggle-select',
@@ -41,6 +43,26 @@ const allSelected = computed(() => props.todos.length > 0 && props.selectedIds.l
 function handleToggleSelectAll() {
 	emit(allSelected.value ? 'clear-selection' : 'select-all')
 }
+
+// Drag-and-drop reordering only makes sense in Manual sort mode (any other
+// mode would just get immediately re-sorted back), and is disabled during
+// selection so a drag can't be confused with picking multiple tasks.
+const reorderable = computed(() => props.sortBy === 'manual' && !props.selectMode)
+
+let draggedId = null
+
+function handleDragStart(id) {
+	draggedId = id
+}
+
+function handleDrop(targetId) {
+	if (draggedId != null && draggedId !== targetId) emit('reorder', draggedId, targetId)
+	draggedId = null
+}
+
+function handleDragEnd() {
+	draggedId = null
+}
 </script>
 
 <template>
@@ -51,6 +73,11 @@ function handleToggleSelectAll() {
 			:todo="todo"
 			:select-mode="selectMode"
 			:selected="selectedIds.includes(todo.id)"
+			:reorderable="reorderable"
+			@dragstart="handleDragStart(todo.id)"
+			@dragover.prevent
+			@drop.prevent="handleDrop(todo.id)"
+			@dragend="handleDragEnd"
 			@toggle="$emit('toggle', $event)"
 			@edit="(id, text) => $emit('edit', id, text)"
 			@set-due-date="(id, date, time) => $emit('set-due-date', id, date, time)"

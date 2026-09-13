@@ -59,6 +59,7 @@ const {
 	restoreTodo,
 	deleteTodoPermanently,
 	clearCompleted,
+	reorderTodo,
 	totalCount,
 	remainingCount,
 	progress,
@@ -136,6 +137,7 @@ const {
 					:has-any-todos="hasAnyTodos"
 					:select-mode="selectMode"
 					:selected-ids="selectedIds"
+					:sort-by="sortBy"
 					@toggle="toggleTodo"
 					@edit="editTodo"
 					@set-due-date="setDueDate"
@@ -148,6 +150,7 @@ const {
 					@toggle-subtask="toggleSubtask"
 					@remove-subtask="removeSubtask"
 					@remove="removeTodo"
+					@reorder="reorderTodo"
 					@clear-completed="clearCompleted"
 					@toggle-select-mode="toggleSelectMode"
 					@toggle-select="toggleSelected"

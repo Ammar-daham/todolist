@@ -13,6 +13,11 @@ const VALID_DUE_FILTERS = DUE_FILTERS.map((d) => d.key)
 const VALID_SORTS = SORT_OPTIONS.map((s) => s.key)
 
 const SORTERS = {
+	// No-op — Array#sort is required to be stable (ES2019+), so this just
+	// preserves whatever order the todos are already in. That order is exactly
+	// what reorderTodo() mutates via drag-and-drop, so "manual" really means
+	// "the order they're stored in".
+	manual: () => 0,
 	priority: (a, b) => PRIORITY_ORDER.indexOf(a.priority || 'medium') - PRIORITY_ORDER.indexOf(b.priority || 'medium'),
 	dueDate: (a, b) => {
 		if (!a.dueDate && !b.dueDate) return 0
@@ -295,6 +300,24 @@ export function useTodos(activeListId) {
 		})
 	}
 
+	// Moves `draggedId` to sit next to `targetId` in the underlying storage
+	// order — the same order the 'manual' sorter (a no-op) leaves untouched.
+	// Re-inserting at the target's pre-removal index naturally lands the item
+	// just after the target when dragging downward, and just before it when
+	// dragging upward — removing the dragged item first only shifts indices
+	// *after* it, so which side of the target you land on falls out of the
+	// splice math for free, without branching on direction.
+	function reorderTodo(draggedId, targetId) {
+		if (draggedId === targetId) return
+		const list = todos.value
+		const fromIndex = list.findIndex((t) => t.id === draggedId)
+		const toIndex = list.findIndex((t) => t.id === targetId)
+		if (fromIndex === -1 || toIndex === -1) return
+
+		const [item] = list.splice(fromIndex, 1)
+		list.splice(toIndex, 0, item)
+	}
+
 	function togglePriorityFilter(key) {
 		const current = priorityFilters.value
 		priorityFilters.value = current.includes(key) ? current.filter((p) => p !== key) : [...current, key]
@@ -504,6 +527,7 @@ export function useTodos(activeListId) {
 		deleteTodoPermanently,
 		deleteTodosForList,
 		clearCompleted,
+		reorderTodo,
 		totalCount,
 		remainingCount,
 		progress,

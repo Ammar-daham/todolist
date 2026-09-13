@@ -255,6 +255,47 @@ describe('tags', () => {
 	})
 })
 
+describe('reorderTodo', () => {
+	function seedFour() {
+		const state = setup()
+		state.addTodo('A', 'low')
+		state.addTodo('B', 'low')
+		state.addTodo('C', 'low')
+		state.addTodo('D', 'low')
+		state.sortBy.value = 'manual'
+		return state
+	}
+
+	it('drops a task immediately after the target when dragged downward', () => {
+		const state = seedFour()
+		const [a, b, c] = state.allTodos.value
+
+		state.reorderTodo(a.id, c.id) // drag A down onto C
+
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['B', 'C', 'A', 'D'])
+	})
+
+	it('drops a task immediately before the target when dragged upward', () => {
+		const state = seedFour()
+		const [, b, , d] = state.allTodos.value
+
+		state.reorderTodo(d.id, b.id) // drag D up onto B
+
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['A', 'D', 'B', 'C'])
+	})
+
+	it('is a no-op when dropped on itself or on an unknown id', () => {
+		const state = seedFour()
+		const [a] = state.allTodos.value
+		const before = state.filteredTodos.value.map((t) => t.text)
+
+		state.reorderTodo(a.id, a.id)
+		state.reorderTodo(a.id, 999999)
+
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(before)
+	})
+})
+
 describe('removal and lists', () => {
 	it('soft-deletes and restores a task', () => {
 		const { addTodo, removeTodo, restoreTodo, allTodos, removedTodos } = setup()
@@ -369,6 +410,14 @@ describe('filters and sorting', () => {
 		const state = seed()
 		state.sortBy.value = 'priority'
 		expect(state.filteredTodos.value.map((t) => t.text)[0]).toBe('Alpha')
+	})
+
+	it('manual sort preserves storage order and is unaffected by reorderTodo elsewhere', () => {
+		const state = seed()
+		state.sortBy.value = 'manual'
+		// seed() adds Zebra, Alpha, Middle in that order — manual mode should
+		// leave that creation order alone rather than re-sorting it.
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['Zebra', 'Alpha', 'Middle'])
 	})
 
 	it('reports whether any filter/search is active', () => {

@@ -7,6 +7,12 @@ const props = defineProps({
 	todo: { type: Object, required: true },
 	selectMode: { type: Boolean, default: false },
 	selected: { type: Boolean, default: false },
+	// True only in Manual sort mode (and never during selection) — see
+	// TodoList, which owns the actual drag/drop wiring. The handle below is
+	// the only draggable element; dragstart/dragover/drop/dragend all bubble
+	// up to this item's root <li>, where TodoList listens for them, so no
+	// extra emits are needed here.
+	reorderable: { type: Boolean, default: false },
 })
 const emit = defineEmits([
 	'toggle',
@@ -180,6 +186,15 @@ function cancelEditSubtask() {
 		:class="{ 'todo-item-done': todo.done }"
 		:style="{ borderInlineStartColor: PRIORITIES[todo.priority || 'medium'].color }"
 	>
+		<span
+			v-if="reorderable"
+			class="drag-handle flex-shrink-0"
+			draggable="true"
+			aria-label="Drag to reorder"
+			@dragstart="(e) => e.dataTransfer?.setData('text/plain', String(todo.id))"
+		>
+			<i class="bi bi-grip-vertical"></i>
+		</span>
 		<label v-if="!selectMode" class="todo-check flex-shrink-0" :class="{ checked: todo.done }">
 			<input type="checkbox" :checked="todo.done" @change="$emit('toggle', todo.id)" />
 			<span class="todo-check-box">
@@ -422,6 +437,22 @@ function cancelEditSubtask() {
 }
 .todo-item:hover {
 	background: var(--surface-alt-hover);
+}
+
+.drag-handle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	cursor: grab;
+	color: var(--text-done);
+	opacity: 0.6;
+}
+.drag-handle:hover {
+	opacity: 1;
+}
+.drag-handle:active {
+	cursor: grabbing;
 }
 
 .priority-badge {

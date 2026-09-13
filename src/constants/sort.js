@@ -1,4 +1,5 @@
 export const SORT_OPTIONS = [
+	{ key: 'manual', label: 'Manual (drag to reorder)', icon: 'bi-arrows-move' },
 	{ key: 'priority', label: 'Priority', icon: 'bi-flag' },
 	{ key: 'dueDate', label: 'Due date', icon: 'bi-calendar-event' },
 	{ key: 'newest', label: 'Newest first', icon: 'bi-sort-numeric-down-alt' },
