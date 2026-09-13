@@ -37,6 +37,7 @@ function loadTodos() {
 			removedAt: null,
 			dueDate: null,
 			dueTime: null,
+			notes: null,
 			...todo,
 			// Todos saved before lists existed have no listId — fold them into
 			// the default list so nothing already on the board disappears.
@@ -137,7 +138,7 @@ export function useTodos(activeListId) {
 		{ deep: true }
 	)
 
-	function addTodo(text, priority, dueDate = null, dueTime = null) {
+	function addTodo(text, priority, dueDate = null, dueTime = null, notes = null) {
 		const trimmed = text.trim()
 		if (!trimmed) return
 		todos.value.push({
@@ -147,6 +148,7 @@ export function useTodos(activeListId) {
 			priority,
 			dueDate,
 			dueTime: dueDate ? dueTime : null,
+			notes: notes ? notes.trim() || null : null,
 			listId: activeListId.value,
 			createdAt: Date.now(),
 			completedAt: null,
@@ -178,6 +180,13 @@ export function useTodos(activeListId) {
 	function setPriority(id, priority) {
 		const todo = todos.value.find((t) => t.id === id)
 		if (todo) todo.priority = priority
+	}
+
+	function setNotes(id, notes) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (!todo) return
+		const trimmed = typeof notes === 'string' ? notes.trim() : ''
+		todo.notes = trimmed || null
 	}
 
 	function toggleTodo(id) {
@@ -244,7 +253,7 @@ export function useTodos(activeListId) {
 		return todosInActiveList.value.filter((t) => {
 			const matchesPriority = !priorities.length || priorities.includes(t.priority || 'medium')
 			const matchesDue = !dues.length || dues.includes(getDueStatus(t.dueDate, t.done))
-			const matchesSearch = !query || t.text.toLowerCase().includes(query)
+			const matchesSearch = !query || t.text.toLowerCase().includes(query) || (t.notes ?? '').toLowerCase().includes(query)
 			return matchesPriority && matchesDue && matchesSearch
 		})
 	})
@@ -376,6 +385,7 @@ export function useTodos(activeListId) {
 		editTodo,
 		setDueDate,
 		setPriority,
+		setNotes,
 		toggleTodo,
 		removeTodo,
 		restoreTodo,

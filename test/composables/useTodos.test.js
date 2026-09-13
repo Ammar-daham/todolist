@@ -50,6 +50,15 @@ describe('addTodo', () => {
 		addTodo('With date', 'low', '2024-01-15', '09:00')
 		expect(allTodos.value[1].dueTime).toBe('09:00')
 	})
+
+	it('trims notes and stores blank notes as null', () => {
+		const { addTodo, allTodos } = setup()
+		addTodo('Task', 'low', null, null, '  Some detail  ')
+		expect(allTodos.value[0].notes).toBe('Some detail')
+
+		addTodo('Other', 'low', null, null, '   ')
+		expect(allTodos.value[1].notes).toBeNull()
+	})
 })
 
 describe('editing and status changes', () => {
@@ -84,6 +93,18 @@ describe('editing and status changes', () => {
 		addTodo('Task', 'low')
 		setPriority(allTodos.value[0].id, 'high')
 		expect(allTodos.value[0].priority).toBe('high')
+	})
+
+	it('sets, trims, and clears notes', () => {
+		const { addTodo, setNotes, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+
+		setNotes(id, '  Remember the receipt  ')
+		expect(allTodos.value[0].notes).toBe('Remember the receipt')
+
+		setNotes(id, '   ')
+		expect(allTodos.value[0].notes).toBeNull()
 	})
 
 	it('sets a due date and clears the due time when the date is cleared', () => {
@@ -194,6 +215,15 @@ describe('filters and sorting', () => {
 		const state = seed()
 		state.searchQuery.value = 'ZEB'
 		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['Zebra'])
+	})
+
+	it('matches search text against notes as well as the task text', () => {
+		const state = setup()
+		state.addTodo('Groceries', 'low', null, null, 'Get oat milk')
+		state.addTodo('Errands', 'low')
+
+		state.searchQuery.value = 'oat milk'
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['Groceries'])
 	})
 
 	it('sorts alphabetically', () => {
@@ -327,6 +357,7 @@ describe('persistence', () => {
 		expect(todo.completedAt).toBeNull()
 		expect(todo.removedAt).toBeNull()
 		expect(todo.dueDate).toBeNull()
+		expect(todo.notes).toBeNull()
 	})
 
 	it('recovers from corrupted todos JSON instead of throwing', () => {

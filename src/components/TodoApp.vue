@@ -44,6 +44,7 @@ const {
 	editTodo,
 	setDueDate,
 	setPriority,
+	setNotes,
 	toggleTodo,
 	removeTodo,
 	restoreTodo,
@@ -127,6 +128,7 @@ const {
 					@edit="editTodo"
 					@set-due-date="setDueDate"
 					@set-priority="setPriority"
+					@set-notes="setNotes"
 					@remove="removeTodo"
 					@clear-completed="clearCompleted"
 					@toggle-select-mode="toggleSelectMode"

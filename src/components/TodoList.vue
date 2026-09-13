@@ -16,6 +16,7 @@ const emit = defineEmits([
 	'edit',
 	'set-due-date',
 	'set-priority',
+	'set-notes',
 	'remove',
 	'clear-completed',
 	'toggle-select-mode',
@@ -48,6 +49,7 @@ function handleToggleSelectAll() {
 			@edit="(id, text) => $emit('edit', id, text)"
 			@set-due-date="(id, date, time) => $emit('set-due-date', id, date, time)"
 			@set-priority="(id, priority) => $emit('set-priority', id, priority)"
+			@set-notes="(id, notes) => $emit('set-notes', id, notes)"
 			@remove="$emit('remove', $event)"
 			@toggle-select="$emit('toggle-select', $event)"
 		/>

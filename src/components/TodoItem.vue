@@ -8,7 +8,7 @@ const props = defineProps({
 	selectMode: { type: Boolean, default: false },
 	selected: { type: Boolean, default: false },
 })
-const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'set-priority', 'remove', 'toggle-select'])
+const emit = defineEmits(['toggle', 'edit', 'set-due-date', 'set-priority', 'set-notes', 'remove', 'toggle-select'])
 
 const isEditing = ref(false)
 const draftText = ref('')
@@ -67,6 +67,31 @@ function clearDue() {
 function handleDateBlur(event) {
 	if (event.relatedTarget && event.relatedTarget === dueTimeInput.value) return
 	saveEditDue()
+}
+
+const isEditingNotes = ref(false)
+const draftNotes = ref('')
+const notesInput = ref(null)
+
+function startEditNotes() {
+	draftNotes.value = props.todo.notes || ''
+	isEditingNotes.value = true
+	nextTick(() => notesInput.value?.focus())
+}
+
+function saveEditNotes() {
+	if (!isEditingNotes.value) return
+	isEditingNotes.value = false
+	emit('set-notes', props.todo.id, draftNotes.value.trim() || null)
+}
+
+function cancelEditNotes() {
+	isEditingNotes.value = false
+}
+
+function clearNotes() {
+	isEditingNotes.value = false
+	emit('set-notes', props.todo.id, null)
 }
 </script>
 
@@ -138,6 +163,33 @@ function handleDateBlur(event) {
 						@blur="saveEditDue"
 					/>
 					<button type="button" class="btn btn-sm btn-link p-0 due-clear" @mousedown.prevent="clearDue">Clear</button>
+				</div>
+
+				<div v-if="!isEditingNotes" class="todo-notes-row">
+					<button
+						type="button"
+						class="notes-badge"
+						:class="todo.notes ? 'notes-filled' : 'notes-empty'"
+						@click="startEditNotes"
+					>
+						<i class="bi bi-card-text"></i>
+						<span v-if="todo.notes" class="notes-preview">{{ todo.notes }}</span>
+						<span v-else>Add notes</span>
+					</button>
+				</div>
+				<div v-else class="notes-edit">
+					<textarea
+						ref="notesInput"
+						v-model="draftNotes"
+						rows="2"
+						class="form-control form-control-sm notes-edit-input"
+						placeholder="Notes"
+						@keyup.esc="cancelEditNotes"
+						@blur="saveEditNotes"
+					></textarea>
+					<button type="button" class="btn btn-sm btn-link p-0 due-clear" @mousedown.prevent="clearNotes">
+						Clear
+					</button>
 				</div>
 			</template>
 		</div>
@@ -321,6 +373,56 @@ function handleDateBlur(event) {
 }
 .due-clear:hover {
 	text-decoration: underline;
+}
+
+.todo-notes-row {
+	margin-top: 4px;
+}
+
+.notes-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	max-width: 100%;
+	border: none;
+	border-radius: 999px;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	font-weight: 500;
+	cursor: pointer;
+	background: var(--surface-alt-hover);
+	color: var(--text-done);
+}
+.notes-badge:hover {
+	filter: brightness(0.96);
+}
+.notes-empty {
+	background: transparent;
+	border: 1px dashed var(--border);
+	opacity: 0.6;
+}
+.notes-empty:hover {
+	opacity: 1;
+}
+.notes-preview {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 220px;
+}
+
+.notes-edit {
+	margin-top: 4px;
+}
+.notes-edit-input {
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+	resize: vertical;
+}
+.notes-edit-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
 }
 
 .todo-check {

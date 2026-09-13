@@ -9,6 +9,7 @@ const text = ref('')
 const priority = ref('medium')
 const dueDate = ref('')
 const dueTime = ref('')
+const notes = ref('')
 
 // The due-date/time pickers open in a panel below the fixed priority/due/Add
 // row instead of inline, so that row never has to squeeze to fit them — see
@@ -16,14 +17,28 @@ const dueTime = ref('')
 const dueOpen = ref(false)
 const dueDateInput = ref(null)
 
+// Notes are opt-in too, and rare enough on task creation that it isn't worth
+// a permanent row — a small toggle keeps the common (title-only) case tidy.
+const notesOpen = ref(false)
+const notesInput = ref(null)
+
 function submit() {
 	if (!text.value.trim()) return
-	emit('add', text.value, priority.value, dueDate.value || null, dueDate.value ? dueTime.value || null : null)
+	emit(
+		'add',
+		text.value,
+		priority.value,
+		dueDate.value || null,
+		dueDate.value ? dueTime.value || null : null,
+		notes.value.trim() || null
+	)
 	text.value = ''
 	priority.value = 'medium'
 	dueDate.value = ''
 	dueTime.value = ''
 	dueOpen.value = false
+	notes.value = ''
+	notesOpen.value = false
 }
 
 function toggleDuePanel() {
@@ -34,6 +49,15 @@ function toggleDuePanel() {
 function clearDue() {
 	dueDate.value = ''
 	dueTime.value = ''
+}
+
+function toggleNotesPanel() {
+	notesOpen.value = !notesOpen.value
+	if (notesOpen.value) nextTick(() => notesInput.value?.focus())
+}
+
+function clearNotes() {
+	notes.value = ''
 }
 </script>
 
@@ -49,6 +73,29 @@ function clearDue() {
 				class="form-control border-start-0 ps-0"
 				placeholder="What needs to be done?"
 			/>
+		</div>
+
+		<div class="d-flex justify-content-end mb-2">
+			<button type="button" class="btn btn-sm btn-link p-0 notes-toggle" @click="toggleNotesPanel">
+				<i class="bi bi-card-text"></i> {{ notes ? 'Edit notes' : 'Add notes' }}
+			</button>
+		</div>
+		<div v-if="notesOpen" class="notes-panel mb-2">
+			<textarea
+				ref="notesInput"
+				v-model="notes"
+				rows="2"
+				class="form-control form-control-sm notes-panel-input"
+				placeholder="Notes (optional)"
+				@keyup.esc="notesOpen = false"
+			></textarea>
+			<div class="d-flex align-items-center justify-content-between mt-2">
+				<button v-if="notes" type="button" class="btn btn-sm btn-link p-0 due-panel-clear" @click="clearNotes">
+					Clear notes
+				</button>
+				<span v-else></span>
+				<button type="button" class="btn btn-sm btn-accent due-panel-done" @click="notesOpen = false">Done</button>
+			</div>
 		</div>
 
 		<!-- Fixed 3-up grid: priority, due (a button that never changes size),
@@ -226,5 +273,32 @@ function clearDue() {
 	border-radius: 9px;
 	font-size: 0.85rem;
 	padding: 0.35rem 0.9rem;
+}
+
+.notes-toggle {
+	font-size: 0.8rem;
+	color: var(--text-done);
+	text-decoration: none;
+}
+.notes-toggle:hover {
+	color: var(--accent-strong);
+}
+
+.notes-panel {
+	border-radius: 12px;
+	background: var(--surface-alt);
+	border: 1px solid var(--border);
+	padding: 10px;
+}
+
+.notes-panel-input {
+	background: var(--surface);
+	border-color: var(--border);
+	color: inherit;
+	resize: vertical;
+}
+.notes-panel-input:focus {
+	box-shadow: none;
+	border-color: var(--accent);
 }
 </style>
