@@ -160,6 +160,19 @@ function submitNewSubtask() {
 const editingSubtaskId = ref(null)
 const draftSubtaskText = ref('')
 
+// The item starts collapsed to a single compact row; expanding it reveals
+// the due date, notes, tags and subtasks sections below. A quick-glance
+// summary strip (see `hasDetails`) still surfaces whether any of that exists
+// even while collapsed, so nothing is hidden without a visible hint.
+const detailsOpen = ref(false)
+const hasDetails = computed(
+	() => Boolean(props.todo.notes) || props.todo.tags.length > 0 || props.todo.subtasks.length > 0 || Boolean(props.todo.dueDate),
+)
+
+function toggleDetails() {
+	detailsOpen.value = !detailsOpen.value
+}
+
 function startEditSubtask(subtask) {
 	editingSubtaskId.value = subtask.id
 	draftSubtaskText.value = subtask.text
@@ -220,6 +233,36 @@ function cancelEditSubtask() {
 			/>
 			<template v-else>
 				<span class="todo-text" @dblclick="!selectMode && startEdit()">{{ todo.text }}</span>
+
+					<div class="todo-summary-row d-flex align-items-center flex-wrap gap-2">
+						<button
+							type="button"
+							class="details-toggle"
+							@click="toggleDetails"
+							:aria-expanded="detailsOpen"
+							:aria-label="detailsOpen ? 'Hide details' : 'Show details'"
+						>
+							<i class="bi" :class="detailsOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+							{{ detailsOpen ? 'Less' : 'Details' }}
+						</button>
+						<template v-if="!detailsOpen">
+							<span v-if="todo.dueDate" class="summary-chip" :class="`due-${dueStatus}`">
+								<i class="bi" :class="todo.dueTime ? 'bi-alarm' : 'bi-calendar-event'"></i>
+								{{ formatDueDate(todo.dueDate, todo.dueTime) }}
+							</span>
+							<span v-if="todo.notes" class="summary-chip" aria-label="Has notes">
+								<i class="bi bi-card-text"></i>
+							</span>
+							<span v-if="todo.tags.length" class="summary-chip">
+								<i class="bi bi-tag"></i>{{ todo.tags.length }}
+							</span>
+							<span v-if="subtaskCount" class="summary-chip">
+								<i class="bi bi-list-check"></i>{{ subtaskDoneCount }}/{{ subtaskCount }}
+							</span>
+						</template>
+					</div>
+
+					<div v-if="detailsOpen" class="todo-details">
 				<div class="todo-meta small text-muted">
 					<span>Created {{ formatRelativeTime(todo.createdAt) }}</span>
 					<span v-if="todo.completedAt"> · Completed {{ formatRelativeTime(todo.completedAt) }}</span>
@@ -386,6 +429,7 @@ function cancelEditSubtask() {
 						</button>
 					</div>
 				</div>
+					</div>
 			</template>
 		</div>
 		<template v-if="!isEditing && !selectMode">
@@ -499,6 +543,55 @@ function cancelEditSubtask() {
 .todo-meta {
 	margin-top: 2px;
 	font-size: 0.72rem;
+}
+
+.todo-summary-row {
+	margin-top: 4px;
+}
+
+.details-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: none;
+	background: transparent;
+	color: var(--text-done);
+	opacity: 0.75;
+	padding: 2px 4px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	border-radius: 6px;
+}
+.details-toggle:hover {
+	opacity: 1;
+	background: var(--surface-alt-hover);
+}
+
+.summary-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	border-radius: 999px;
+	padding: 2px 8px;
+	font-size: 0.68rem;
+	font-weight: 600;
+	background: var(--surface-alt-hover);
+	color: var(--text-done);
+}
+.summary-chip.due-overdue {
+	background: var(--danger-bg);
+	color: var(--danger);
+}
+.summary-chip.due-upcoming {
+	background: var(--warning-bg);
+	color: var(--warning);
+}
+.summary-chip.due-done {
+	text-decoration: line-through;
+}
+
+.todo-details {
+	margin-top: 2px;
 }
 
 .todo-edit-input {
