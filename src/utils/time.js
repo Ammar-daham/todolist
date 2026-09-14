@@ -28,6 +28,19 @@ function startOfToday() {
 	return today
 }
 
+function toDateString(date) {
+	const y = date.getFullYear()
+	const m = String(date.getMonth() + 1).padStart(2, '0')
+	const d = String(date.getDate()).padStart(2, '0')
+	return `${y}-${m}-${d}`
+}
+
+// Today's date as a `dueDate`-shaped string, for defaulting a recurring
+// task's anchor date when it doesn't already have a due date of its own.
+export function todayDateString() {
+	return toDateString(new Date())
+}
+
 function daysUntilDue(dateStr) {
 	const diffMs = parseDueDate(dateStr) - startOfToday()
 	return Math.round(diffMs / 86400000)
@@ -68,6 +81,28 @@ export function parseDueDateTime(dateStr, timeStr) {
 	const [y, m, d] = dateStr.split('-').map(Number)
 	const [h, min] = timeStr.split(':').map(Number)
 	return new Date(y, m - 1, d, h, min, 0, 0).getTime()
+}
+
+// The next occurrence's due date for a recurring task, computed from the
+// occurrence that was just completed rather than from "today" — so a task
+// due every Monday stays anchored to Mondays even if it's completed late (or
+// early), instead of drifting onto whatever day it happened to be checked off.
+export function getNextDueDate(dateStr, recurrence) {
+	if (!dateStr || !recurrence) return dateStr
+	const n = Math.max(1, Math.round(recurrence.interval) || 1)
+	const date = parseDueDate(dateStr)
+	if (recurrence.frequency === 'weekly') date.setDate(date.getDate() + n * 7)
+	else if (recurrence.frequency === 'monthly') date.setMonth(date.getMonth() + n)
+	else date.setDate(date.getDate() + n) // daily is the default/fallback unit
+	return toDateString(date)
+}
+
+export function formatRecurrence(recurrence) {
+	if (!recurrence) return ''
+	const n = Math.max(1, Math.round(recurrence.interval) || 1)
+	const unit = { daily: 'day', weekly: 'week', monthly: 'month' }[recurrence.frequency] || 'day'
+	if (n === 1) return { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' }[recurrence.frequency] || 'Daily'
+	return `Every ${n} ${unit}s`
 }
 
 export function getDueStatus(dateStr, done) {

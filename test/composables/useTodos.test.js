@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref, nextTick } from 'vue'
 import { useTodos } from '../../src/composables/useTodos'
 import { DEFAULT_LIST_ID } from '../../src/composables/useLists'
+import { todayDateString } from '../../src/utils/time'
 
 // addTodo/toggleTodo/etc. all stamp with Date.now(), and calling them back to
 // back in a test can land in the same millisecond — mock it so every call
@@ -119,6 +120,110 @@ describe('editing and status changes', () => {
 		setDueDate(id, null)
 		expect(allTodos.value[0].dueDate).toBeNull()
 		expect(allTodos.value[0].dueTime).toBeNull()
+	})
+})
+
+describe('recurrence', () => {
+	it('sets a recurrence rule, defaulting the due date to today when none is set', () => {
+		const { addTodo, setRecurrence, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+
+		setRecurrence(id, { frequency: 'weekly', interval: 2 })
+
+		expect(allTodos.value[0].recurrence).toEqual({ frequency: 'weekly', interval: 2 })
+		expect(allTodos.value[0].dueDate).toBe(todayDateString())
+	})
+
+	it('does not override an existing due date when recurrence is set', () => {
+		const { addTodo, setDueDate, setRecurrence, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+		setDueDate(id, '2024-05-01')
+
+		setRecurrence(id, { frequency: 'daily', interval: 1 })
+
+		expect(allTodos.value[0].dueDate).toBe('2024-05-01')
+	})
+
+	it('clamps a missing/invalid interval to 1 and falls back to daily for an unknown frequency', () => {
+		const { addTodo, setRecurrence, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+
+		setRecurrence(id, { frequency: 'yearly', interval: 0 })
+
+		expect(allTodos.value[0].recurrence).toEqual({ frequency: 'daily', interval: 1 })
+	})
+
+	it('clears recurrence', () => {
+		const { addTodo, setRecurrence, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+		setRecurrence(id, { frequency: 'daily', interval: 1 })
+
+		setRecurrence(id, null)
+
+		expect(allTodos.value[0].recurrence).toBeNull()
+	})
+
+	it('spawns the next occurrence when a recurring task is completed', () => {
+		const { addTodo, setDueDate, setRecurrence, toggleTodo, addTag, addSubtask, allTodos } = setup()
+		addTodo('Water plants', 'medium')
+		const id = allTodos.value[0].id
+		setDueDate(id, '2024-01-15')
+		setRecurrence(id, { frequency: 'daily', interval: 3 })
+		addTag(id, 'chores')
+		addSubtask(id, 'Fill watering can')
+
+		toggleTodo(id)
+
+		expect(allTodos.value).toHaveLength(2)
+		const original = allTodos.value.find((t) => t.id === id)
+		const next = allTodos.value.find((t) => t.id !== id)
+
+		expect(original.done).toBe(true)
+		expect(original.dueDate).toBe('2024-01-15')
+
+		expect(next.done).toBe(false)
+		expect(next.text).toBe('Water plants')
+		expect(next.dueDate).toBe('2024-01-18')
+		expect(next.tags).toEqual(['chores'])
+		expect(next.recurrence).toEqual({ frequency: 'daily', interval: 3 })
+		expect(next.subtasks).toHaveLength(1)
+		expect(next.subtasks[0].text).toBe('Fill watering can')
+		expect(next.subtasks[0].done).toBe(false)
+		expect(next.subtasks[0].id).not.toBe(original.subtasks[0].id)
+	})
+
+	it('does not spawn a next occurrence for a non-recurring task, or one without a due date', () => {
+		const { addTodo, setRecurrence, toggleTodo, allTodos } = setup()
+		addTodo('Plain task', 'low')
+		toggleTodo(allTodos.value[0].id)
+		expect(allTodos.value).toHaveLength(1)
+
+		addTodo('No due date', 'low')
+		const id = allTodos.value[1].id
+		// Force a recurrence without a due date, bypassing setRecurrence's
+		// auto-default, to confirm toggleTodo itself guards on dueDate too.
+		allTodos.value[1].recurrence = { frequency: 'daily', interval: 1 }
+		allTodos.value[1].dueDate = null
+		toggleTodo(id)
+		expect(allTodos.value).toHaveLength(2)
+	})
+
+	it('does not retract the spawned occurrence when the completed task is un-completed again', () => {
+		const { addTodo, setDueDate, setRecurrence, toggleTodo, allTodos } = setup()
+		addTodo('Task', 'low')
+		const id = allTodos.value[0].id
+		setDueDate(id, '2024-01-15')
+		setRecurrence(id, { frequency: 'daily', interval: 1 })
+
+		toggleTodo(id) // complete -> spawns next occurrence
+		toggleTodo(id) // un-complete again
+
+		expect(allTodos.value).toHaveLength(2)
+		expect(allTodos.value.find((t) => t.id === id).done).toBe(false)
 	})
 })
 

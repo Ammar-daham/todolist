@@ -4,13 +4,25 @@ import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/sort'
 import { STATUSES, DEFAULT_STATUS } from '../constants/status'
 import { VIEWS, DEFAULT_VIEW } from '../constants/view'
 import { DUE_FILTERS } from '../constants/due'
-import { getDueStatus } from '../utils/time'
+import { RECURRENCE_FREQUENCIES, DEFAULT_RECURRENCE_FREQUENCY } from '../constants/recurrence'
+import { getDueStatus, getNextDueDate, todayDateString } from '../utils/time'
 import { DEFAULT_LIST_ID } from './useLists'
 
 const VALID_VIEWS = VIEWS.map((v) => v.key)
 const VALID_STATUSES = STATUSES.map((s) => s.key)
 const VALID_DUE_FILTERS = DUE_FILTERS.map((d) => d.key)
 const VALID_SORTS = SORT_OPTIONS.map((s) => s.key)
+const VALID_RECURRENCE_FREQUENCIES = RECURRENCE_FREQUENCIES.map((f) => f.key)
+
+function isValidRecurrence(recurrence) {
+	return (
+		recurrence != null &&
+		typeof recurrence === 'object' &&
+		VALID_RECURRENCE_FREQUENCIES.includes(recurrence.frequency) &&
+		Number.isFinite(recurrence.interval) &&
+		recurrence.interval >= 1
+	)
+}
 
 const SORTERS = {
 	// No-op — Array#sort is required to be stable (ES2019+), so this just
@@ -62,10 +74,12 @@ function loadTodos() {
 			notes: null,
 			subtasks: [],
 			tags: [],
+			recurrence: null,
 			...todo,
 			// Guard against a corrupted/legacy value that isn't actually an array.
 			subtasks: Array.isArray(todo.subtasks) ? todo.subtasks : [],
 			tags: Array.isArray(todo.tags) ? todo.tags : [],
+			recurrence: isValidRecurrence(todo.recurrence) ? todo.recurrence : null,
 			// Todos saved before lists existed have no listId — fold them into
 			// the default list so nothing already on the board disappears.
 			listId: todo.listId ?? DEFAULT_LIST_ID,
@@ -189,6 +203,7 @@ export function useTodos(activeListId) {
 			notes: notes ? notes.trim() || null : null,
 			subtasks: [],
 			tags: normalizeTags(tags),
+			recurrence: null,
 			listId: activeListId.value,
 			createdAt: Date.now(),
 			completedAt: null,
@@ -227,6 +242,51 @@ export function useTodos(activeListId) {
 		if (!todo) return
 		const trimmed = typeof notes === 'string' ? notes.trim() : ''
 		todo.notes = trimmed || null
+	}
+
+	// `recurrence` is `{ frequency, interval }` or null to turn recurrence off.
+	// Repeating only means something with an anchor date to count from, so
+	// turning it on defaults the due date to today when the task doesn't have
+	// one yet, rather than silently storing a rule that can never fire.
+	function setRecurrence(id, recurrence) {
+		const todo = todos.value.find((t) => t.id === id)
+		if (!todo) return
+		if (!recurrence) {
+			todo.recurrence = null
+			return
+		}
+		const frequency = VALID_RECURRENCE_FREQUENCIES.includes(recurrence.frequency)
+			? recurrence.frequency
+			: DEFAULT_RECURRENCE_FREQUENCY
+		const interval = Math.max(1, Math.round(Number(recurrence.interval)) || 1)
+		todo.recurrence = { frequency, interval }
+		if (!todo.dueDate) todo.dueDate = todayDateString()
+	}
+
+	// Completing a recurring task spawns its next occurrence as a fresh,
+	// independent task rather than resetting this one in place — that way the
+	// just-finished instance still shows up as "done" in the completed filter
+	// and in history, exactly like a one-off task would.
+	function spawnNextOccurrence(todo) {
+		todos.value.push({
+			id: Date.now(),
+			text: todo.text,
+			done: false,
+			priority: todo.priority,
+			dueDate: getNextDueDate(todo.dueDate, todo.recurrence),
+			dueTime: todo.dueTime,
+			notes: todo.notes,
+			// Subtasks carry over as a fresh, unchecked checklist — same shape,
+			// new ids, so ticking them off on this occurrence doesn't retroactively
+			// affect the completed one.
+			subtasks: todo.subtasks.map((s) => ({ id: Date.now(), text: s.text, done: false })),
+			tags: [...todo.tags],
+			recurrence: { ...todo.recurrence },
+			listId: todo.listId,
+			createdAt: Date.now(),
+			completedAt: null,
+			removedAt: null,
+		})
 	}
 
 	function addTag(id, tag) {
@@ -275,8 +335,15 @@ export function useTodos(activeListId) {
 	function toggleTodo(id) {
 		const todo = todos.value.find((t) => t.id === id)
 		if (!todo) return
-		todo.done = !todo.done
-		todo.completedAt = todo.done ? Date.now() : null
+		const completing = !todo.done
+		todo.done = completing
+		todo.completedAt = completing ? Date.now() : null
+		// Un-completing later doesn't retract the spawned occurrence — it
+		// already exists as its own task by then, same as if it'd been added
+		// by hand.
+		if (completing && todo.recurrence && todo.dueDate) {
+			spawnNextOccurrence(todo)
+		}
 	}
 
 	function removeTodo(id) {
@@ -515,6 +582,7 @@ export function useTodos(activeListId) {
 		setDueDate,
 		setPriority,
 		setNotes,
+		setRecurrence,
 		addTag,
 		removeTag,
 		addSubtask,

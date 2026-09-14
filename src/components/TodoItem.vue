@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
-import { formatRelativeTime, formatDueDate, getDueStatus } from '../utils/time'
+import { RECURRENCE_FREQUENCIES, DEFAULT_RECURRENCE_FREQUENCY } from '../constants/recurrence'
+import { formatRelativeTime, formatDueDate, formatRecurrence, getDueStatus } from '../utils/time'
 
 const props = defineProps({
 	todo: { type: Object, required: true },
@@ -20,6 +21,7 @@ const emit = defineEmits([
 	'set-due-date',
 	'set-priority',
 	'set-notes',
+	'set-recurrence',
 	'add-tag',
 	'remove-tag',
 	'add-subtask',
@@ -87,6 +89,33 @@ function clearDue() {
 function handleDateBlur(event) {
 	if (event.relatedTarget && event.relatedTarget === dueTimeInput.value) return
 	saveEditDue()
+}
+
+// Frequency + interval are edited together, so (unlike due/notes) there's no
+// single field to blur out of — an explicit Save/Clear pair is used instead.
+const isEditingRecurrence = ref(false)
+const draftFrequency = ref(DEFAULT_RECURRENCE_FREQUENCY)
+const draftInterval = ref(1)
+
+function startEditRecurrence() {
+	draftFrequency.value = props.todo.recurrence?.frequency || DEFAULT_RECURRENCE_FREQUENCY
+	draftInterval.value = props.todo.recurrence?.interval || 1
+	isEditingRecurrence.value = true
+}
+
+function saveEditRecurrence() {
+	if (!isEditingRecurrence.value) return
+	isEditingRecurrence.value = false
+	emit('set-recurrence', props.todo.id, { frequency: draftFrequency.value, interval: draftInterval.value })
+}
+
+function cancelEditRecurrence() {
+	isEditingRecurrence.value = false
+}
+
+function clearRecurrence() {
+	isEditingRecurrence.value = false
+	emit('set-recurrence', props.todo.id, null)
 }
 
 const isEditingNotes = ref(false)
@@ -166,7 +195,12 @@ const draftSubtaskText = ref('')
 // even while collapsed, so nothing is hidden without a visible hint.
 const detailsOpen = ref(false)
 const hasDetails = computed(
-	() => Boolean(props.todo.notes) || props.todo.tags.length > 0 || props.todo.subtasks.length > 0 || Boolean(props.todo.dueDate),
+	() =>
+		Boolean(props.todo.notes) ||
+		props.todo.tags.length > 0 ||
+		props.todo.subtasks.length > 0 ||
+		Boolean(props.todo.dueDate) ||
+		Boolean(props.todo.recurrence),
 )
 
 function toggleDetails() {
@@ -238,6 +272,7 @@ function cancelEditSubtask() {
 						<button
 							type="button"
 							class="details-toggle"
+							:class="{ 'details-toggle-has-details': hasDetails }"
 							@click="toggleDetails"
 							:aria-expanded="detailsOpen"
 							:aria-label="detailsOpen ? 'Hide details' : 'Show details'"
@@ -249,6 +284,9 @@ function cancelEditSubtask() {
 							<span v-if="todo.dueDate" class="summary-chip" :class="`due-${dueStatus}`">
 								<i class="bi" :class="todo.dueTime ? 'bi-alarm' : 'bi-calendar-event'"></i>
 								{{ formatDueDate(todo.dueDate, todo.dueTime) }}
+							</span>
+							<span v-if="todo.recurrence" class="summary-chip" aria-label="Repeats">
+								<i class="bi bi-arrow-repeat"></i>{{ formatRecurrence(todo.recurrence) }}
 							</span>
 							<span v-if="todo.notes" class="summary-chip" aria-label="Has notes">
 								<i class="bi bi-card-text"></i>
@@ -300,6 +338,41 @@ function cancelEditSubtask() {
 						@blur="saveEditDue"
 					/>
 					<button type="button" class="btn btn-sm btn-link p-0 due-clear" @mousedown.prevent="clearDue">Clear</button>
+				</div>
+
+				<div v-if="!isEditingRecurrence" class="todo-recurrence-row">
+					<button
+						type="button"
+						class="recurrence-badge"
+						:class="todo.recurrence ? 'recurrence-filled' : 'recurrence-empty'"
+						@click="startEditRecurrence"
+					>
+						<i class="bi bi-arrow-repeat"></i>
+						{{ todo.recurrence ? formatRecurrence(todo.recurrence) : 'Repeat' }}
+					</button>
+				</div>
+				<div v-else class="recurrence-edit d-flex align-items-center flex-wrap gap-2">
+					<span class="recurrence-edit-label">Every</span>
+					<input
+						v-model.number="draftInterval"
+						type="number"
+						min="1"
+						class="form-control form-control-sm recurrence-edit-number"
+						@keyup.enter="saveEditRecurrence"
+						@keyup.esc="cancelEditRecurrence"
+					/>
+					<select v-model="draftFrequency" class="form-select form-select-sm recurrence-edit-select">
+						<option v-for="opt in RECURRENCE_FREQUENCIES" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
+					</select>
+					<button type="button" class="btn btn-sm btn-accent recurrence-save" @click="saveEditRecurrence">Save</button>
+					<button
+						v-if="todo.recurrence"
+						type="button"
+						class="btn btn-sm btn-link p-0 due-clear"
+						@mousedown.prevent="clearRecurrence"
+					>
+						Clear
+					</button>
 				</div>
 
 				<div v-if="!isEditingNotes" class="todo-notes-row">
@@ -566,6 +639,10 @@ function cancelEditSubtask() {
 	opacity: 1;
 	background: var(--surface-alt-hover);
 }
+.details-toggle-has-details {
+	opacity: 1;
+	color: var(--accent-strong);
+}
 
 .summary-chip {
 	display: inline-flex;
@@ -677,6 +754,84 @@ function cancelEditSubtask() {
 }
 .due-clear:hover {
 	text-decoration: underline;
+}
+
+.todo-recurrence-row {
+	margin-top: 4px;
+}
+
+.recurrence-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: none;
+	border-radius: 999px;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	font-weight: 500;
+	cursor: pointer;
+	background: var(--surface-alt-hover);
+	color: var(--text-done);
+}
+.recurrence-badge:hover {
+	filter: brightness(0.96);
+}
+.recurrence-empty {
+	background: transparent;
+	border: 1px dashed var(--border);
+	opacity: 0.6;
+}
+.recurrence-empty:hover {
+	opacity: 1;
+}
+.recurrence-filled {
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+}
+
+.recurrence-edit {
+	margin-top: 4px;
+}
+.recurrence-edit-label {
+	font-size: 0.75rem;
+	color: var(--text-done);
+}
+.recurrence-edit-number {
+	width: 64px;
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+}
+.recurrence-edit-number:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+.recurrence-edit-select {
+	width: auto;
+	background: var(--surface);
+	border-color: var(--accent);
+	color: inherit;
+}
+.recurrence-edit-select:focus {
+	box-shadow: none;
+	border-color: var(--accent);
+}
+.recurrence-save {
+	border-radius: 999px;
+	font-size: 0.72rem;
+	padding: 2px 12px;
+}
+
+.btn-accent {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: var(--accent-contrast);
+}
+.btn-accent:hover,
+.btn-accent:focus {
+	background: var(--accent-strong);
+	border-color: var(--accent-strong);
+	color: var(--accent-contrast);
 }
 
 .todo-notes-row {

@@ -18,6 +18,7 @@ const emit = defineEmits([
 	'set-due-date',
 	'set-priority',
 	'set-notes',
+	'set-recurrence',
 	'add-tag',
 	'remove-tag',
 	'add-subtask',
@@ -83,6 +84,7 @@ function handleDragEnd() {
 			@set-due-date="(id, date, time) => $emit('set-due-date', id, date, time)"
 			@set-priority="(id, priority) => $emit('set-priority', id, priority)"
 			@set-notes="(id, notes) => $emit('set-notes', id, notes)"
+			@set-recurrence="(id, recurrence) => $emit('set-recurrence', id, recurrence)"
 			@add-tag="(id, tag) => $emit('add-tag', id, tag)"
 			@remove-tag="(id, tag) => $emit('remove-tag', id, tag)"
 			@add-subtask="(id, text) => $emit('add-subtask', id, text)"

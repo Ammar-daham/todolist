@@ -48,6 +48,7 @@ const {
 	setDueDate,
 	setPriority,
 	setNotes,
+	setRecurrence,
 	addTag,
 	removeTag,
 	addSubtask,
@@ -143,6 +144,7 @@ const {
 					@set-due-date="setDueDate"
 					@set-priority="setPriority"
 					@set-notes="setNotes"
+					@set-recurrence="setRecurrence"
 					@add-tag="addTag"
 					@remove-tag="removeTag"
 					@add-subtask="addSubtask"

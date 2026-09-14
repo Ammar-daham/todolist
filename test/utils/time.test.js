@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { formatRelativeTime, formatDueTime, formatDueDate, parseDueDateTime, getDueStatus } from '../../src/utils/time'
+import {
+	formatRelativeTime,
+	formatDueTime,
+	formatDueDate,
+	parseDueDateTime,
+	getDueStatus,
+	getNextDueDate,
+	formatRecurrence,
+	todayDateString,
+} from '../../src/utils/time'
 
 describe('formatRelativeTime', () => {
 	afterEach(() => vi.useRealTimers())
@@ -106,5 +115,64 @@ describe('getDueStatus', () => {
 		expect(getDueStatus('2024-01-15', false)).toBe('upcoming')
 		expect(getDueStatus('2024-01-17', false)).toBe('upcoming')
 		expect(getDueStatus('2024-01-18', false)).toBe('normal')
+	})
+})
+
+describe('getNextDueDate', () => {
+	it('returns the original date unchanged when there is no date or no recurrence', () => {
+		expect(getNextDueDate(null, { frequency: 'daily', interval: 1 })).toBeNull()
+		expect(getNextDueDate('2024-01-15', null)).toBe('2024-01-15')
+	})
+
+	it('advances by the interval in days for daily recurrence', () => {
+		expect(getNextDueDate('2024-01-15', { frequency: 'daily', interval: 1 })).toBe('2024-01-16')
+		expect(getNextDueDate('2024-01-15', { frequency: 'daily', interval: 3 })).toBe('2024-01-18')
+	})
+
+	it('advances by the interval in weeks for weekly recurrence', () => {
+		expect(getNextDueDate('2024-01-15', { frequency: 'weekly', interval: 1 })).toBe('2024-01-22')
+		expect(getNextDueDate('2024-01-15', { frequency: 'weekly', interval: 2 })).toBe('2024-01-29')
+	})
+
+	it('advances by the interval in months for monthly recurrence', () => {
+		expect(getNextDueDate('2024-01-15', { frequency: 'monthly', interval: 1 })).toBe('2024-02-15')
+		expect(getNextDueDate('2024-01-31', { frequency: 'monthly', interval: 1 })).toBe('2024-03-02') // Feb has no 31st
+	})
+
+	it('anchors to the original due date rather than today, so a late completion does not shift the schedule', () => {
+		// e.g. a task due every Monday, completed a day late on Tuesday, should
+		// still land on the following Monday — not "a week from Tuesday".
+		expect(getNextDueDate('2024-01-15', { frequency: 'weekly', interval: 1 })).toBe('2024-01-22')
+	})
+
+	it('treats a missing/invalid interval as 1', () => {
+		expect(getNextDueDate('2024-01-15', { frequency: 'daily' })).toBe('2024-01-16')
+	})
+})
+
+describe('formatRecurrence', () => {
+	it('returns an empty string when there is no recurrence', () => {
+		expect(formatRecurrence(null)).toBe('')
+	})
+
+	it('labels a 1-interval recurrence by its plain frequency name', () => {
+		expect(formatRecurrence({ frequency: 'daily', interval: 1 })).toBe('Daily')
+		expect(formatRecurrence({ frequency: 'weekly', interval: 1 })).toBe('Weekly')
+		expect(formatRecurrence({ frequency: 'monthly', interval: 1 })).toBe('Monthly')
+	})
+
+	it('labels a custom interval as "Every N <unit>s"', () => {
+		expect(formatRecurrence({ frequency: 'daily', interval: 3 })).toBe('Every 3 days')
+		expect(formatRecurrence({ frequency: 'weekly', interval: 2 })).toBe('Every 2 weeks')
+	})
+})
+
+describe('todayDateString', () => {
+	afterEach(() => vi.useRealTimers())
+
+	it('formats the current date as YYYY-MM-DD', () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date(2024, 0, 5, 8, 0, 0))
+		expect(todayDateString()).toBe('2024-01-05')
 	})
 })
