@@ -548,6 +548,56 @@ export function useTodos(activeListId) {
 		totalCount.value ? Math.round(((totalCount.value - remainingCount.value) / totalCount.value) * 100) : 0
 	)
 
+	// Real undo/redo — a snapshot history of the whole todos array (every
+	// list, not just the active one), so any data-changing action (text
+	// edits, priority/notes/tags/subtasks/due-date/recurrence changes,
+	// add/remove/restore, reordering, and bulk actions) can be undone, not
+	// just the soft-delete/restore pair the Removed view already covers on
+	// its own. Deliberately in-memory only (not persisted to localStorage) —
+	// like the bulk-selection state above, a stale history reappearing after
+	// a reload would be more confusing than useful.
+	const MAX_UNDO_STEPS = 50
+	const undoStack = ref([])
+	const redoStack = ref([])
+
+	function snapshotTodos() {
+		return JSON.parse(JSON.stringify(todos.value))
+	}
+
+	// Wraps a mutating function so that, if it actually changed the data, the
+	// prior state is pushed onto the undo stack and the redo stack is
+	// cleared. Comparing before/after (rather than pushing unconditionally)
+	// keeps no-op calls — a blank edit, an add-tag with no todo found, etc. —
+	// from cluttering the undo history with steps that would visibly do
+	// nothing when undone.
+	function withUndo(mutator) {
+		return (...args) => {
+			const before = snapshotTodos()
+			mutator(...args)
+			if (JSON.stringify(before) === JSON.stringify(todos.value)) return
+			undoStack.value.push(before)
+			if (undoStack.value.length > MAX_UNDO_STEPS) undoStack.value.shift()
+			redoStack.value = []
+		}
+	}
+
+	function undo() {
+		if (!undoStack.value.length) return
+		const previous = undoStack.value.pop()
+		redoStack.value.push(snapshotTodos())
+		todos.value = previous
+	}
+
+	function redo() {
+		if (!redoStack.value.length) return
+		const next = redoStack.value.pop()
+		undoStack.value.push(snapshotTodos())
+		todos.value = next
+	}
+
+	const canUndo = computed(() => undoStack.value.length > 0)
+	const canRedo = computed(() => redoStack.value.length > 0)
+
 	return {
 		view,
 		statusFilter,
@@ -574,28 +624,36 @@ export function useTodos(activeListId) {
 		toggleSelected,
 		selectAllVisible,
 		clearSelection,
-		bulkComplete,
-		bulkSetPriority,
-		bulkDelete,
-		addTodo,
-		editTodo,
-		setDueDate,
-		setPriority,
-		setNotes,
-		setRecurrence,
-		addTag,
-		removeTag,
-		addSubtask,
-		editSubtask,
-		toggleSubtask,
-		removeSubtask,
-		toggleTodo,
-		removeTodo,
-		restoreTodo,
-		deleteTodoPermanently,
+		bulkComplete: withUndo(bulkComplete),
+		bulkSetPriority: withUndo(bulkSetPriority),
+		bulkDelete: withUndo(bulkDelete),
+		addTodo: withUndo(addTodo),
+		editTodo: withUndo(editTodo),
+		setDueDate: withUndo(setDueDate),
+		setPriority: withUndo(setPriority),
+		setNotes: withUndo(setNotes),
+		setRecurrence: withUndo(setRecurrence),
+		addTag: withUndo(addTag),
+		removeTag: withUndo(removeTag),
+		addSubtask: withUndo(addSubtask),
+		editSubtask: withUndo(editSubtask),
+		toggleSubtask: withUndo(toggleSubtask),
+		removeSubtask: withUndo(removeSubtask),
+		toggleTodo: withUndo(toggleTodo),
+		removeTodo: withUndo(removeTodo),
+		restoreTodo: withUndo(restoreTodo),
+		deleteTodoPermanently: withUndo(deleteTodoPermanently),
+		// Not wrapped: it's the automatic consequence of deleting an entire
+		// list (itself not undoable), not a standalone user edit — undoing
+		// just the tasks back into existence under a list that's already gone
+		// would be more confusing than useful.
 		deleteTodosForList,
-		clearCompleted,
-		reorderTodo,
+		clearCompleted: withUndo(clearCompleted),
+		reorderTodo: withUndo(reorderTodo),
+		undo,
+		redo,
+		canUndo,
+		canRedo,
 		totalCount,
 		remainingCount,
 		progress,

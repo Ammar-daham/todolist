@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, onUnmounted } from 'vue'
 import { useTodos } from '../composables/useTodos'
 import { useLists } from '../composables/useLists'
 import { useTheme } from '../composables/useTheme'
@@ -61,11 +62,38 @@ const {
 	deleteTodoPermanently,
 	clearCompleted,
 	reorderTodo,
+	undo,
+	redo,
+	canUndo,
+	canRedo,
 	totalCount,
 	remainingCount,
 	progress,
 	deleteTodosForList,
 } = useTodos(activeListId)
+
+// Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (also Ctrl/Cmd+Y) drive undo/redo from
+// anywhere in the app — except while focus is in a text field, where the
+// browser's own native undo for whatever's being typed should win instead of
+// the app-wide history.
+function isEditableTarget(el) {
+	if (!el) return false
+	return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable
+}
+
+function handleKeydown(event) {
+	const key = event.key.toLowerCase()
+	const isUndoCombo = (event.ctrlKey || event.metaKey) && !event.shiftKey && key === 'z'
+	const isRedoCombo = (event.ctrlKey || event.metaKey) && ((event.shiftKey && key === 'z') || key === 'y')
+	if (!isUndoCombo && !isRedoCombo) return
+	if (isEditableTarget(document.activeElement)) return
+	event.preventDefault()
+	if (isUndoCombo) undo()
+	else redo()
+}
+
+onMounted(() => window.addEventListener('keydown', handleKeydown))
+onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
 function handleRemoveList(id) {
 	deleteTodosForList(id)
@@ -98,6 +126,8 @@ const {
 					:due-alerts-permission="dueAlertsPermission"
 					:lists="lists"
 					:active-list-id="activeListId"
+					:can-undo="canUndo"
+					:can-redo="canRedo"
 					@toggle-theme="toggleTheme"
 					@select-theme="setTheme"
 					@toggle-due-alerts="toggleDueAlerts"
@@ -105,6 +135,8 @@ const {
 					@add-list="addList"
 					@rename-list="renameList"
 					@remove-list="handleRemoveList"
+					@undo="undo"
+					@redo="redo"
 				/>
 
 				<div v-if="saveError" class="save-error d-flex align-items-start gap-2 mb-3" role="alert">

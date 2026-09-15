@@ -2,6 +2,7 @@
 import ThemeToggle from './ThemeToggle.vue'
 import ThemePicker from './ThemePicker.vue'
 import DueAlertsToggle from './DueAlertsToggle.vue'
+import UndoRedoControls from './UndoRedoControls.vue'
 import TodoListSwitcher from './TodoListSwitcher.vue'
 
 defineProps({
@@ -15,6 +16,8 @@ defineProps({
 	dueAlertsPermission: { type: String, required: true },
 	lists: { type: Array, required: true },
 	activeListId: { type: String, required: true },
+	canUndo: { type: Boolean, required: true },
+	canRedo: { type: Boolean, required: true },
 })
 defineEmits([
 	'toggle-theme',
@@ -24,6 +27,8 @@ defineEmits([
 	'add-list',
 	'rename-list',
 	'remove-list',
+	'undo',
+	'redo',
 ])
 </script>
 
@@ -52,6 +57,7 @@ defineEmits([
 			</div>
 			<!-- Grouped so the three controls can never overlap the title on a narrow card — see CLAUDE-guided mobile layout redesign. -->
 			<div class="icon-toolbar flex-shrink-0">
+				<UndoRedoControls :can-undo="canUndo" :can-redo="canRedo" @undo="$emit('undo')" @redo="$emit('redo')" />
 				<DueAlertsToggle
 					:enabled="dueAlertsEnabled"
 					:permission="dueAlertsPermission"

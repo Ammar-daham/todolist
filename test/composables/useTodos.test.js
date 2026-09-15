@@ -624,6 +624,142 @@ describe('bulk actions', () => {
 	})
 })
 
+describe('undo/redo', () => {
+	it('reports no undo/redo available initially', () => {
+		const state = setup()
+		expect(state.canUndo.value).toBe(false)
+		expect(state.canRedo.value).toBe(false)
+	})
+
+	it('undoes a text edit', () => {
+		const state = setup()
+		state.addTodo('Original', 'low')
+		const id = state.allTodos.value[0].id
+
+		state.editTodo(id, 'Changed')
+		expect(state.allTodos.value[0].text).toBe('Changed')
+		expect(state.canUndo.value).toBe(true)
+
+		state.undo()
+		expect(state.allTodos.value[0].text).toBe('Original')
+		expect(state.canUndo.value).toBe(true) // the earlier addTodo is still undoable
+		expect(state.canRedo.value).toBe(true)
+	})
+
+	it('redoes an undone edit', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		const id = state.allTodos.value[0].id
+		state.setPriority(id, 'high')
+
+		state.undo()
+		expect(state.allTodos.value[0].priority).toBe('low')
+
+		state.redo()
+		expect(state.allTodos.value[0].priority).toBe('high')
+		expect(state.canRedo.value).toBe(false)
+	})
+
+	it('undoes a bulk priority change across multiple tasks', () => {
+		const state = setup()
+		state.addTodo('One', 'low')
+		state.addTodo('Two', 'low')
+		const [a, b] = state.allTodos.value
+		state.toggleSelected(a.id)
+		state.toggleSelected(b.id)
+
+		state.bulkSetPriority('high')
+		expect(state.allTodos.value.map((t) => t.priority)).toEqual(['high', 'high'])
+
+		state.undo()
+		expect(state.allTodos.value.map((t) => t.priority)).toEqual(['low', 'low'])
+	})
+
+	it('undoes adding and removing a task', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		expect(state.allTodos.value).toHaveLength(1)
+
+		state.undo()
+		expect(state.allTodos.value).toHaveLength(0)
+
+		state.redo()
+		expect(state.allTodos.value).toHaveLength(1)
+
+		const id = state.allTodos.value[0].id
+		state.removeTodo(id)
+		expect(state.allTodos.value[0].removedAt).not.toBeNull()
+
+		state.undo()
+		expect(state.allTodos.value[0].removedAt).toBeNull()
+	})
+
+	it('undoes tag and subtask changes', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		const id = state.allTodos.value[0].id
+
+		state.addTag(id, 'work')
+		expect(state.allTodos.value[0].tags).toEqual(['work'])
+		state.undo()
+		expect(state.allTodos.value[0].tags).toEqual([])
+
+		state.addSubtask(id, 'Step one')
+		expect(state.allTodos.value[0].subtasks).toHaveLength(1)
+		state.undo()
+		expect(state.allTodos.value[0].subtasks).toHaveLength(0)
+	})
+
+	it('undoes manual reordering', () => {
+		const state = setup()
+		state.addTodo('A', 'low')
+		state.addTodo('B', 'low')
+		state.sortBy.value = 'manual'
+		const [a, b] = state.allTodos.value
+
+		state.reorderTodo(a.id, b.id)
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['B', 'A'])
+
+		state.undo()
+		expect(state.filteredTodos.value.map((t) => t.text)).toEqual(['A', 'B'])
+	})
+
+	it('does not record a no-op action (blank edit) as an undo step', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		const id = state.allTodos.value[0].id
+		const stepsAfterAdd = state.canUndo.value
+
+		state.editTodo(id, '   ') // blank — ignored by editTodo itself
+
+		state.undo()
+		// If the blank edit had been recorded, this first undo would be a
+		// no-op restoring the (unchanged) text instead of removing the task.
+		expect(state.allTodos.value).toHaveLength(0)
+		expect(stepsAfterAdd).toBe(true)
+	})
+
+	it('clears the redo stack once a new action is taken after an undo', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		const id = state.allTodos.value[0].id
+		state.setPriority(id, 'high')
+
+		state.undo()
+		expect(state.canRedo.value).toBe(true)
+
+		state.setNotes(id, 'A new branch of history')
+		expect(state.canRedo.value).toBe(false)
+	})
+
+	it('is a no-op when there is nothing to undo or redo', () => {
+		const state = setup()
+		state.undo()
+		state.redo()
+		expect(state.allTodos.value).toEqual([])
+	})
+})
+
 describe('persistence', () => {
 	it('saves todos to localStorage on change', async () => {
 		const { addTodo } = setup()
