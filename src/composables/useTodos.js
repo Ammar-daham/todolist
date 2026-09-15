@@ -615,6 +615,7 @@ export function useTodos(activeListId) {
 		filteredTodos,
 		removedTodos,
 		allTodos,
+		activeTodos,
 		hasAnyTodos,
 		alertableTodos,
 		saveError,

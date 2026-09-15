@@ -10,6 +10,7 @@ import TodoHeaderBar from './TodoHeaderBar.vue'
 import TodoInput from './TodoInput.vue'
 import TodoToolbar from './TodoToolbar.vue'
 import TodoList from './TodoList.vue'
+import TodoCalendar from './TodoCalendar.vue'
 import TodoRemovedList from './TodoRemovedList.vue'
 import TodoHistory from './TodoHistory.vue'
 
@@ -32,6 +33,7 @@ const {
 	filteredTodos,
 	removedTodos,
 	allTodos,
+	activeTodos,
 	hasAnyTodos,
 	alertableTodos,
 	saveError,
@@ -193,6 +195,23 @@ const {
 					@bulk-complete="bulkComplete"
 					@bulk-set-priority="bulkSetPriority"
 					@bulk-delete="bulkDelete"
+				/>
+				<TodoCalendar
+					v-else-if="view === 'calendar'"
+					:todos="activeTodos"
+					@toggle="toggleTodo"
+					@edit="editTodo"
+					@set-due-date="setDueDate"
+					@set-priority="setPriority"
+					@set-notes="setNotes"
+					@set-recurrence="setRecurrence"
+					@add-tag="addTag"
+					@remove-tag="removeTag"
+					@add-subtask="addSubtask"
+					@edit-subtask="editSubtask"
+					@toggle-subtask="toggleSubtask"
+					@remove-subtask="removeSubtask"
+					@remove="removeTodo"
 				/>
 				<TodoRemovedList
 					v-else-if="view === 'removed'"
