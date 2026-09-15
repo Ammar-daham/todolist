@@ -760,6 +760,109 @@ describe('undo/redo', () => {
 	})
 })
 
+describe('lastAction (undo/redo toast state)', () => {
+	it('starts with no announced action', () => {
+		const state = setup()
+		expect(state.lastAction.value).toBeNull()
+	})
+
+	it('describes an undone text edit by old and new text', () => {
+		const state = setup()
+		state.addTodo('Original', 'low')
+		const id = state.allTodos.value[0].id
+		state.editTodo(id, 'Changed')
+
+		state.undo()
+
+		expect(state.lastAction.value).toEqual({ type: 'undo', description: 'Renamed "Original" to "Changed"' })
+	})
+
+	it('describes a redo using the same description, with type "redo"', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		const id = state.allTodos.value[0].id
+		state.setPriority(id, 'high')
+
+		state.undo()
+		const undoDescription = state.lastAction.value.description
+		state.redo()
+
+		expect(state.lastAction.value).toEqual({ type: 'redo', description: undoDescription })
+	})
+
+	it('describes completing and un-completing a task', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		const id = state.allTodos.value[0].id
+
+		state.toggleTodo(id)
+		state.undo()
+		expect(state.lastAction.value.description).toBe('Completed "Task"')
+
+		state.redo()
+		state.toggleTodo(id) // un-complete
+		state.undo()
+		expect(state.lastAction.value.description).toBe('Marked "Task" as not done')
+	})
+
+	it('describes a bulk priority change with a count', () => {
+		const state = setup()
+		state.addTodo('One', 'low')
+		state.addTodo('Two', 'low')
+		const [a, b] = state.allTodos.value
+		state.toggleSelected(a.id)
+		state.toggleSelected(b.id)
+		state.bulkSetPriority('high')
+
+		state.undo()
+
+		expect(state.lastAction.value.description).toBe('Set priority to High on 2 tasks')
+	})
+
+	it('describes clearing completed tasks with a singular/plural count', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		state.toggleTodo(state.allTodos.value[0].id)
+		state.clearCompleted()
+
+		state.undo()
+
+		expect(state.lastAction.value.description).toBe('Cleared 1 completed task')
+	})
+
+	it('describes deleting and restoring a task', () => {
+		const state = setup()
+		state.addTodo('Groceries', 'low')
+		const id = state.allTodos.value[0].id
+
+		state.removeTodo(id)
+		state.undo()
+		expect(state.lastAction.value.description).toBe('Deleted "Groceries"')
+
+		state.redo()
+		state.restoreTodo(id)
+		state.undo()
+		expect(state.lastAction.value.description).toBe('Restored "Groceries"')
+	})
+
+	it('clears once dismissed', () => {
+		const state = setup()
+		state.addTodo('Task', 'low')
+		state.undo()
+		expect(state.lastAction.value).not.toBeNull()
+
+		state.dismissLastAction()
+
+		expect(state.lastAction.value).toBeNull()
+	})
+
+	it('does not change when undo/redo is a no-op', () => {
+		const state = setup()
+		state.undo()
+		expect(state.lastAction.value).toBeNull()
+	})
+})
+
 describe('persistence', () => {
 	it('saves todos to localStorage on change', async () => {
 		const { addTodo } = setup()

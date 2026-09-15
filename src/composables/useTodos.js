@@ -1,11 +1,11 @@
 import { ref, computed, watch } from 'vue'
-import { PRIORITY_ORDER } from '../constants/priorities'
+import { PRIORITIES, PRIORITY_ORDER } from '../constants/priorities'
 import { SORT_OPTIONS, DEFAULT_SORT } from '../constants/sort'
 import { STATUSES, DEFAULT_STATUS } from '../constants/status'
 import { VIEWS, DEFAULT_VIEW } from '../constants/view'
 import { DUE_FILTERS } from '../constants/due'
 import { RECURRENCE_FREQUENCIES, DEFAULT_RECURRENCE_FREQUENCY } from '../constants/recurrence'
-import { getDueStatus, getNextDueDate, todayDateString } from '../utils/time'
+import { getDueStatus, getNextDueDate, todayDateString, formatRecurrence } from '../utils/time'
 import { DEFAULT_LIST_ID } from './useLists'
 
 const VALID_VIEWS = VIEWS.map((v) => v.key)
@@ -560,22 +560,113 @@ export function useTodos(activeListId) {
 	const undoStack = ref([])
 	const redoStack = ref([])
 
+	// The most recent undo/redo, for the UI to announce as a toast — e.g.
+	// "Undid: Completed 'Buy milk'". Null once dismissed. Not itself
+	// undoable/redoable state, just a transient notice.
+	const lastAction = ref(null)
+
 	function snapshotTodos() {
 		return JSON.parse(JSON.stringify(todos.value))
 	}
 
+	function findTodoIn(list, id) {
+		return list.find((t) => t.id === id)
+	}
+
+	// Counts todos where `predicate(before, after)` newly holds true — used to
+	// describe bulk actions ("Completed 3 tasks") without hard-coding which
+	// ids were touched.
+	function countChanged(before, after, predicate) {
+		const beforeMap = new Map(before.map((t) => [t.id, t]))
+		let count = 0
+		for (const t of after) {
+			const prev = beforeMap.get(t.id)
+			if (prev && predicate(prev, t)) count++
+		}
+		return count
+	}
+
+	function pluralize(n, noun) {
+		return `${n} ${noun}${n === 1 ? '' : 's'}`
+	}
+
+	// One describe function per undoable action, given (args, before, after)
+	// — `before`/`after` are full-array snapshots, so a description can look
+	// up whatever text/state it needs regardless of which side of the change
+	// still has it (e.g. a deleted task's text only survives in `before`).
+	const DESCRIBERS = {
+		addTodo: (args) => `Added "${args[0].trim()}"`,
+		editTodo: (args, before, after) => {
+			const oldText = findTodoIn(before, args[0])?.text
+			const newText = findTodoIn(after, args[0])?.text ?? args[1].trim()
+			return oldText ? `Renamed "${oldText}" to "${newText}"` : `Renamed a task to "${newText}"`
+		},
+		setDueDate: (args, before, after) => {
+			const text = findTodoIn(after, args[0])?.text ?? ''
+			return args[1] ? `Set due date on "${text}"` : `Cleared due date on "${text}"`
+		},
+		setPriority: (args, before, after) => {
+			const text = findTodoIn(after, args[0])?.text ?? ''
+			return `Set priority of "${text}" to ${PRIORITIES[args[1]]?.label ?? args[1]}`
+		},
+		setNotes: (args, before, after) => {
+			const text = findTodoIn(after, args[0])?.text ?? ''
+			return args[1] ? `Updated notes on "${text}"` : `Cleared notes on "${text}"`
+		},
+		setRecurrence: (args, before, after) => {
+			const text = findTodoIn(after, args[0])?.text ?? ''
+			return args[1] ? `Set "${text}" to repeat ${formatRecurrence(args[1]).toLowerCase()}` : `Turned off repeat on "${text}"`
+		},
+		addTag: (args, before, after) => `Added tag "${args[1].trim()}" to "${findTodoIn(after, args[0])?.text ?? ''}"`,
+		removeTag: (args, before) => `Removed tag "${args[1]}" from "${findTodoIn(before, args[0])?.text ?? ''}"`,
+		addSubtask: (args, before, after) => `Added subtask "${args[1].trim()}" to "${findTodoIn(after, args[0])?.text ?? ''}"`,
+		editSubtask: (args, before, after) => `Renamed a subtask on "${findTodoIn(after, args[0])?.text ?? ''}"`,
+		toggleSubtask: (args, before, after) => {
+			const todo = findTodoIn(after, args[0])
+			const subtask = todo?.subtasks.find((s) => s.id === args[1])
+			const verb = subtask?.done ? 'Checked off' : 'Unchecked'
+			return `${verb} "${subtask?.text ?? 'a subtask'}" on "${todo?.text ?? ''}"`
+		},
+		removeSubtask: (args, before) => {
+			const todo = findTodoIn(before, args[0])
+			const subtask = todo?.subtasks.find((s) => s.id === args[1])
+			return `Removed subtask "${subtask?.text ?? ''}" from "${todo?.text ?? ''}"`
+		},
+		toggleTodo: (args, before, after) => {
+			const todo = findTodoIn(after, args[0])
+			return todo?.done ? `Completed "${todo.text}"` : `Marked "${todo?.text ?? ''}" as not done`
+		},
+		removeTodo: (args, before) => `Deleted "${findTodoIn(before, args[0])?.text ?? ''}"`,
+		restoreTodo: (args, before) => `Restored "${findTodoIn(before, args[0])?.text ?? ''}"`,
+		deleteTodoPermanently: (args, before) => `Permanently deleted "${findTodoIn(before, args[0])?.text ?? ''}"`,
+		clearCompleted: (args, before, after) =>
+			`Cleared ${pluralize(countChanged(before, after, (p, a) => !p.removedAt && a.removedAt), 'completed task')}`,
+		reorderTodo: (args, before, after) => `Moved "${findTodoIn(after, args[0])?.text ?? ''}"`,
+		bulkComplete: (args, before, after) =>
+			`Completed ${pluralize(countChanged(before, after, (p, a) => !p.done && a.done), 'task')}`,
+		bulkSetPriority: (args, before, after) =>
+			`Set priority to ${PRIORITIES[args[0]]?.label ?? args[0]} on ${pluralize(
+				countChanged(before, after, (p, a) => p.priority !== a.priority),
+				'task'
+			)}`,
+		bulkDelete: (args, before, after) =>
+			`Deleted ${pluralize(countChanged(before, after, (p, a) => !p.removedAt && a.removedAt), 'task')}`,
+	}
+
 	// Wraps a mutating function so that, if it actually changed the data, the
-	// prior state is pushed onto the undo stack and the redo stack is
-	// cleared. Comparing before/after (rather than pushing unconditionally)
-	// keeps no-op calls — a blank edit, an add-tag with no todo found, etc. —
-	// from cluttering the undo history with steps that would visibly do
-	// nothing when undone.
-	function withUndo(mutator) {
+	// prior state (plus a human-readable description of what changed) is
+	// pushed onto the undo stack and the redo stack is cleared. Comparing
+	// before/after (rather than pushing unconditionally) keeps no-op calls —
+	// a blank edit, an add-tag with no todo found, etc. — from cluttering the
+	// undo history with steps that would visibly do nothing when undone.
+	function withUndo(name, mutator) {
 		return (...args) => {
 			const before = snapshotTodos()
 			mutator(...args)
-			if (JSON.stringify(before) === JSON.stringify(todos.value)) return
-			undoStack.value.push(before)
+			const after = todos.value
+			if (JSON.stringify(before) === JSON.stringify(after)) return
+			const description = DESCRIBERS[name]?.(args, before, after) ?? 'Change'
+			undoStack.value.push({ snapshot: before, description })
 			if (undoStack.value.length > MAX_UNDO_STEPS) undoStack.value.shift()
 			redoStack.value = []
 		}
@@ -583,16 +674,22 @@ export function useTodos(activeListId) {
 
 	function undo() {
 		if (!undoStack.value.length) return
-		const previous = undoStack.value.pop()
-		redoStack.value.push(snapshotTodos())
-		todos.value = previous
+		const entry = undoStack.value.pop()
+		redoStack.value.push({ snapshot: snapshotTodos(), description: entry.description })
+		todos.value = entry.snapshot
+		lastAction.value = { type: 'undo', description: entry.description }
 	}
 
 	function redo() {
 		if (!redoStack.value.length) return
-		const next = redoStack.value.pop()
-		undoStack.value.push(snapshotTodos())
-		todos.value = next
+		const entry = redoStack.value.pop()
+		undoStack.value.push({ snapshot: snapshotTodos(), description: entry.description })
+		todos.value = entry.snapshot
+		lastAction.value = { type: 'redo', description: entry.description }
+	}
+
+	function dismissLastAction() {
+		lastAction.value = null
 	}
 
 	const canUndo = computed(() => undoStack.value.length > 0)
@@ -625,36 +722,38 @@ export function useTodos(activeListId) {
 		toggleSelected,
 		selectAllVisible,
 		clearSelection,
-		bulkComplete: withUndo(bulkComplete),
-		bulkSetPriority: withUndo(bulkSetPriority),
-		bulkDelete: withUndo(bulkDelete),
-		addTodo: withUndo(addTodo),
-		editTodo: withUndo(editTodo),
-		setDueDate: withUndo(setDueDate),
-		setPriority: withUndo(setPriority),
-		setNotes: withUndo(setNotes),
-		setRecurrence: withUndo(setRecurrence),
-		addTag: withUndo(addTag),
-		removeTag: withUndo(removeTag),
-		addSubtask: withUndo(addSubtask),
-		editSubtask: withUndo(editSubtask),
-		toggleSubtask: withUndo(toggleSubtask),
-		removeSubtask: withUndo(removeSubtask),
-		toggleTodo: withUndo(toggleTodo),
-		removeTodo: withUndo(removeTodo),
-		restoreTodo: withUndo(restoreTodo),
-		deleteTodoPermanently: withUndo(deleteTodoPermanently),
+		bulkComplete: withUndo('bulkComplete', bulkComplete),
+		bulkSetPriority: withUndo('bulkSetPriority', bulkSetPriority),
+		bulkDelete: withUndo('bulkDelete', bulkDelete),
+		addTodo: withUndo('addTodo', addTodo),
+		editTodo: withUndo('editTodo', editTodo),
+		setDueDate: withUndo('setDueDate', setDueDate),
+		setPriority: withUndo('setPriority', setPriority),
+		setNotes: withUndo('setNotes', setNotes),
+		setRecurrence: withUndo('setRecurrence', setRecurrence),
+		addTag: withUndo('addTag', addTag),
+		removeTag: withUndo('removeTag', removeTag),
+		addSubtask: withUndo('addSubtask', addSubtask),
+		editSubtask: withUndo('editSubtask', editSubtask),
+		toggleSubtask: withUndo('toggleSubtask', toggleSubtask),
+		removeSubtask: withUndo('removeSubtask', removeSubtask),
+		toggleTodo: withUndo('toggleTodo', toggleTodo),
+		removeTodo: withUndo('removeTodo', removeTodo),
+		restoreTodo: withUndo('restoreTodo', restoreTodo),
+		deleteTodoPermanently: withUndo('deleteTodoPermanently', deleteTodoPermanently),
 		// Not wrapped: it's the automatic consequence of deleting an entire
 		// list (itself not undoable), not a standalone user edit — undoing
 		// just the tasks back into existence under a list that's already gone
 		// would be more confusing than useful.
 		deleteTodosForList,
-		clearCompleted: withUndo(clearCompleted),
-		reorderTodo: withUndo(reorderTodo),
+		clearCompleted: withUndo('clearCompleted', clearCompleted),
+		reorderTodo: withUndo('reorderTodo', reorderTodo),
 		undo,
 		redo,
 		canUndo,
 		canRedo,
+		lastAction,
+		dismissLastAction,
 		totalCount,
 		remainingCount,
 		progress,

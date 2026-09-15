@@ -6,6 +6,7 @@ import { useTheme } from '../composables/useTheme'
 import { useCustomTheme } from '../composables/useCustomTheme'
 import { useDueAlerts } from '../composables/useDueAlerts'
 import DueAlertToast from './DueAlertToast.vue'
+import UndoToast from './UndoToast.vue'
 import TodoHeaderBar from './TodoHeaderBar.vue'
 import TodoInput from './TodoInput.vue'
 import TodoToolbar from './TodoToolbar.vue'
@@ -68,6 +69,8 @@ const {
 	redo,
 	canUndo,
 	canRedo,
+	lastAction,
+	dismissLastAction,
 	totalCount,
 	remainingCount,
 	progress,
@@ -224,6 +227,7 @@ const {
 		</div>
 
 		<DueAlertToast :toast="dueAlertToast" @dismiss="dismissDueAlertToast" />
+		<UndoToast :action="lastAction" @dismiss="dismissLastAction" @undo="undo" @redo="redo" />
 	</div>
 </template>
 
